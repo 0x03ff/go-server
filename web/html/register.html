@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link href="/assets/css/register.css" rel="stylesheet" type="text/css">
+    <link rel="icon" href="/assets/image/storage_icon.ico">
+</head>
+<body>
+    <div class="container">
+        <h2>Registration</h2>
+
+        <form id="register-form">
+            <label for="register_username">Please input user ID: 6-20 Characters:</label>
+            <input type="text" id="username" name="username" placeholder="UserID" maxlength="20" required>
+
+            <label for="password">Please input user password: 8-20 Characters</label><br>
+            <input type="password" id="password" name="password" placeholder="Password" maxlength="20" required>
+
+            <label for="confirm_password">Please input user password again: 8-20 Characters</label><br>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" maxlength="20" required>
+
+            <button type="submit">Register</button>
+        </form>
+
+        <div class="link">
+            <a href="/login">Already have an account? Sign in</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('register-form');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+
+            if (username.length < 6 || username.length > 20) {
+                alert('User ID must be between 6 and 20 characters');
+                return;
+            }
+
+            if (password.length < 8 || password.length > 20) {
+                alert('Password must be between 8 and 20 characters');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+
+            const userData = {
+                username,
+                password
+            };
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                       'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json(); // Parse as JSON
+                    alert('Registration failed: ' + errorData.error);
+                    return;
+                    }
+                //user success create account and back /login 
+                alert('Registered successfully\nnow back to login page');
+                location.replace('/login');
+
+                    
+                } catch (error) {
+                    console.error(error);
+                    alert('An error occurred: ' + error.message);
+                }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+    "terminal.integrated.shell.linux": "bash",
+    "terminal.integrated.scrollbackLines": 10000,
+    "terminal.integrated.enableBracketedPaste": false
+}

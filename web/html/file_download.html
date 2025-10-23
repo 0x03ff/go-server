@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Files</title>
+    <link href="/assets/css/remain_page.css" rel="stylesheet" type="text/css">
+        <link rel="icon" href="/assets/image/storage_icon.ico">
+
+
+</head>
+<body>
+<div class="container">
+        <div class="sidebar">
+            <a href="/home/{{.UserID}}">Home</a><br>
+            <a href="/file_upload/{{.UserID}}">Upload file</a><br>
+            <a href="/file_download/{{.UserID}}">Download file</a><br>
+            <a href="/logout/{{.UserID}}">Logout</a><br>
+        </div>
+        <div class="main-content">
+            
+        <h1>Online Storage System</h1>
+
+        <div class="card">
+            
+        <h3>Your file</h3>
+
+    
+        <table border="1" align="center">
+            <tr>
+                <th>Poll Name</th>
+                <th>Poll Question</th>
+                <th>Your Vote</th>
+            </tr>
+            
+           
+        </table>
+    
+        <p>No votes found.</p>
+    
+
+    <div class="pagination">
+       
+         <p>next Page</p>
+    </div>
+</div>
+</body>
+</html>

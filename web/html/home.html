@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <link href="/assets/css/home.css" rel="stylesheet" type="text/css">
+    <link rel="icon" href="/assets/image/storage_icon.ico">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <a href="/home/{{.UserID}}">Home</a><br>
+            <a href="/file_upload/{{.UserID}}">Upload file</a><br>
+            <a href="/file_download/{{.UserID}}">Download file</a><br>
+            <a href="/logout/{{.UserID}}">Logout</a><br>
+        </div>
+        <div class="main-content">
+            <div class="user-profile">
+                <h1>User Profile</h1>
+                <p>Welcome, <strong>{{.UserName}}</strong>!</p>
+                <p>This is your personal dashboard where you can manage your files.</p>
+            </div>
+            <div class="content">
+                <p>For more options, please navigate using the sidebar menu.</p>
+            </div>
+        </div>
+    </div>
+
+    
+</body>
+</html>

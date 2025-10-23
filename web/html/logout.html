@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logout Page</title>
+    <link href="/assets/css/login.css" rel="stylesheet" type="text/css">    
+    <link rel="icon" href="/assets/image/storage_icon.ico">
+</head>
+<body>
+    <div class="logout-container">
+        <h1>You are now logged out.</h1>
+        <p>You will be redirected to the login page shortly.</p>
+        <button onclick="location.href='/login'">Go to Login Page</button>
+    </div>
+
+    <script>
+        // Remove the token from sessionStorage
+        sessionStorage.removeItem('token');
+
+        // Redirect to the login page after a short delay
+        setTimeout(function() {
+            window.location.href = '/login';
+        }, 3000); // 3 seconds delay
+    </script>
+</body>
+</html>
