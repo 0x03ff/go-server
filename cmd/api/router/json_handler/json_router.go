@@ -17,7 +17,7 @@ type JsonHandlers struct {
 func NewHandlers(dbPool *pgxpool.Pool) *JsonHandlers {
 	return &JsonHandlers{
 		dbPool:    dbPool,
-		WebServer: web_server.NewWebServerHandlers(),
+		WebServer: web_server.NewWebServerHandlers(dbPool), // Pass dbPool here
 	}
 }
 
@@ -26,7 +26,6 @@ type App interface {
 	GetJsonHandlers() *JsonHandlers
 }
 
-// ADD THIS METHOD - This is the critical fix
 // GetWebServerHandlers implements the web_server.App interface
 func (h *JsonHandlers) GetWebServerHandlers() *web_server.WebServerHandlers {
 	return h.WebServer
@@ -37,7 +36,7 @@ func SetupJsonRoutes(r chi.Router, app App) {
 	handlers := app.GetJsonHandlers()
 
 	// Setup resilience routes
-	web_server.SetupResilienceRoutes(r, handlers)  // Now this will work
+	web_server.SetupResilienceRoutes(r, handlers)
 
 	// Existing routes
 	r.Post("/api/login", handlers.LoginHandler)

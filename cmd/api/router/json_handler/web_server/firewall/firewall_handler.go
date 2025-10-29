@@ -1,15 +1,22 @@
 package firewall
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Use Handler as the type name
-type Handler struct{}
+type Handler struct {
+	dbPool *pgxpool.Pool
+}
 
-func NewHandler() *Handler {
-	return &Handler{}
+// NewHandler accepts dbPool
+func NewHandler(dbPool *pgxpool.Pool) *Handler {
+	return &Handler{
+		dbPool: dbPool,
+	}
 }
 
 func (h *Handler) FirewallHandler(w http.ResponseWriter, r *http.Request) {

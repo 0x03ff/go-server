@@ -2,22 +2,28 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
-	"fmt"
-	
+
 	// Add gopsutil dependency for real metrics
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-// Handler handles web server hardening API requests
-type Handler struct{}
-
-// NewHandler creates a new handler instance
-func NewHandler() *Handler {
-	return &Handler{}
+// Handler now includes dbPool
+type Handler struct {
+	dbPool *pgxpool.Pool
 }
+
+// NewHandler accepts dbPool
+func NewHandler(dbPool *pgxpool.Pool) *Handler {
+	return &Handler{
+		dbPool: dbPool,
+	}
+}
+
 
 // SystemMetrics represents CPU and memory usage metrics
 type SystemMetrics struct {

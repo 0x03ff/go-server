@@ -29,7 +29,6 @@ type SystemKeyRepository interface {
 type FileRepository interface {
 	 Upload(ctx context.Context, user *models.File) (err error)
 	 Search(ctx context.Context, userID uuid.UUID, index int) ([]*models.File, error) 
-	 
 	 GetFileById(ctx context.Context, file *models.File, id int) error
 }
 

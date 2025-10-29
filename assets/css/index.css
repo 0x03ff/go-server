@@ -45,3 +45,56 @@ p {
 .btn-register:hover {
     background-color: #27ae60;
 }
+
+/* New button styles for API monitoring */
+.api-section {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.api-section h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+.btn-server {
+    background-color: #3498db;
+}
+
+.btn-server:hover {
+    background-color: #2980b9;
+}
+
+.btn-firewall {
+    background-color: #e74c3c;
+}
+
+.btn-firewall:hover {
+    background-color: #c0392b;
+}
+
+.btn-tcp {
+    background-color: #9b59b6;
+}
+
+.btn-tcp:hover {
+    background-color: #8e44ad;
+}
+
+.btn-security {
+    background-color: #16a085;
+}
+
+.btn-security:hover {
+    background-color: #13836f;
+}
+
