@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,174 +8,121 @@
     <link href="/assets/css/remain_page.css" rel="stylesheet" type="text/css">
     <link rel="icon" href="/assets/image/storage_icon.ico">
 </head>
+
 <body>
     <div class="container">
         <div class="sidebar">
             <a href="/home/{{.UserID}}">Home</a><br>
-            <a href="/file_upload/{{.UserID}}">Upload file</a><br>
-            <a href="/file_download/{{.UserID}}">Download file</a><br>
+            <a href="/file_upload/{{.UserID}}" class="active">Upload file</a><br>
+            <a href="/file_download/{{.UserID}}?index=0">Download file</a><br>
             <a href="/logout/{{.UserID}}">Logout</a><br>
         </div>
         <div class="main-content">
             <h1>Online Storage System</h1>
             <div class="card">
                 <h3>Upload file</h3>
-                <form id="upload-form" action="/api/upload_file/{{.UserID}}" method="POST" enctype="multipart/form-data">
+                <form id="upload-form">
+                    <input type="hidden" name="user_id" value="{{.UserID}}">
                     <div class="input-group">
-                        <label for="file_name">File Name</label>
-                        <input type="text" id="file_name" name="filename" placeholder="Enter file name" required>
+                        <label for="file_name">File name: 6-20 Characters:</label>
+                        <input type="text" id="file_name" name="filename" placeholder="Enter file name" maxlength="20"
+                            required>
                     </div>
                     <div class="input-group">
                         <label for="file">Choose File</label>
                         <input type="file" id="file" name="file" required>
                     </div>
-                    <div class="input-group">
-                        <input type="hidden" id="public-key" value="{{.PublicKey}}">
-                    </div>
+
                     <div class="button-group">
                         <button type="submit" id="upload-btn" disabled>Upload file</button>
                     </div>
                 </form>
+                <div id="response-message"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        document.getElementById('upload-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const userId = '{{.UserID}}';
-            const fileName = document.getElementById('file_name').value;
+    <script type="module">
+        import { ECDH_encryption } from '/assets/js/ECDH_384.js';
+        document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('file');
-            const file = fileInput.files[0];
-            const publicKey = document.getElementById('public-key').value;
+            const fileNameInput = document.getElementById('file_name');
+            
+            // Track the selected file's extension
+            let fileExtension = '';
+            let originalFileName = '';
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    originalFileName = this.files[0].name;
+                    const lastDotIndex = originalFileName.lastIndexOf('.');
+                    
+                    if (lastDotIndex > 0) {
+                        fileExtension = originalFileName.substring(lastDotIndex + 1); // Get extension without dot
+                    } else {
+                        fileExtension = 'bin'; // Default to binary
+                    }
+                }
+            });
 
-            if (!fileName || !file) {
-                alert("Please enter a file name and select a file.");
-                return;
+            document.getElementById('file_name').addEventListener('input', checkInputs);
+            document.getElementById('file').addEventListener('change', checkInputs);
+            document.getElementById('upload-form').addEventListener('submit', handleFileUpload);
+
+            function checkInputs() {
+                const fileName = document.getElementById('file_name').value.trim();
+                const fileInput = document.getElementById('file');
+                const uploadBtn = document.getElementById('upload-btn');
+
+                if (fileName.length >= 6 && fileName.length <= 20 && fileInput.files.length > 0) {
+                    uploadBtn.disabled = false;
+                } else {
+                    uploadBtn.disabled = true;
+                }
             }
 
-            // Generate a random AES key
-            const aesKey = crypto.getRandomValues(new Uint8Array(32));
+            async function handleFileUpload(event) {
+                event.preventDefault();
 
-            try {
-                // Encrypt the file with the AES key
-                const encryptedFile = await encryptFileWithAES(file, aesKey);
+                const formData = new FormData(document.getElementById('upload-form'));
+                const responseMessage = document.getElementById('response-message');
 
-                // Encrypt the AES key with the RSA public key
-                const encryptedAesKey = await encryptAesKeyWithRsa(aesKey, publicKey);
+                try {
+                    const file = document.getElementById('file').files[0];
+                    
+                    // Combine user filename with original extension
+                    const userFilename = fileNameInput.value.trim();
+                    const finalFileName = userFilename + (fileExtension ? '.' + fileExtension : '');
+                    
+                    // Encrypt the file
+                    const encryptedArrayBuffer = await ECDH_encryption(await file.arrayBuffer());
+                    
+                    // Add extension to form data (critical for server-side)
+                    formData.append('extension', fileExtension);
+                    
+                    // Set the file with the final name
+                    formData.set('file', new Blob([encryptedArrayBuffer]), finalFileName);
 
-                // Prepare the form data
-                const formData = new FormData();
-                formData.append('filename', fileName);
-                formData.append('file', new Blob([encryptedFile]), fileName);
-                formData.append('encrypted_aes_key', encryptedAesKey);
+                    const response = await fetch('/api/upload_file/{{.UserID}}', {
+                        method: 'POST',
+                        body: formData,
+                    });
 
-                // Send the form data to the server
-                const response = await fetch(`/api/upload_file/${userId}`, {
-                    method: 'POST',
-                    body: formData
-                });
+                    if (!response.ok) {
+                        const errorMessage = await response.text();
+                        throw new Error(errorMessage);
+                    }
 
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    alert(data.message);
+                    window.location.href = '/home/{{.UserID}}';
+                } catch (error) {
+                    alert('Error uploading file: ' + error);
+                    window.location.href = '/home/{{.UserID}}';
                 }
-
-                const result = await response.json();
-                console.log(result);
-                alert("File uploaded successfully");
-            } catch (error) {
-                console.error('There was a problem with the fetch operation:', error);
-                alert("An error occurred while uploading the file.");
             }
         });
-
-        document.getElementById('file_name').addEventListener('input', enableUploadButton);
-        document.getElementById('file').addEventListener('change', enableUploadButton);
-
-        function enableUploadButton() {
-            const fileName = document.getElementById('file_name').value;
-            const file = document.getElementById('file').files[0];
-            const uploadBtn = document.getElementById('upload-btn');
-
-            if (fileName && file) {
-                uploadBtn.disabled = false;
-            } else {
-                uploadBtn.disabled = true;
-            }
-        }
-
-        async function encryptFileWithAES(file, aesKey) {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer(file);
-
-            return new Promise((resolve, reject) => {
-                reader.onload = async () => {
-                    const fileBuffer = reader.result;
-                    const iv = crypto.getRandomValues(new Uint8Array(16));
-
-                    const cryptoKey = await crypto.subtle.importKey(
-                        'raw',
-                        aesKey,
-                        {name: 'AES-GCM', length: 256},
-                        false,
-                        ['encrypt']
-                    );
-
-                    const encrypted = await crypto.subtle.encrypt(
-                        {
-                            name: 'AES-GCM',
-                            iv: iv
-                        },
-                        cryptoKey,
-                        fileBuffer
-                    );
-
-                    resolve(new Uint8Array([...iv, ...new Uint8Array(encrypted)]));
-                };
-
-                reader.onerror = () => {
-                    reject(reader.error);
-                };
-            });
-        }
-
-        async function encryptAesKeyWithRsa(aesKey, publicKey) {
-            const spki = await importPublicKey(publicKey);
-
-            const encrypted = await crypto.subtle.encrypt(
-                {
-                    name: 'RSA-OAEP',
-                    hash: {name: 'SHA-256'}
-                },
-                spki,
-                aesKey
-            );
-
-            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-        }
-
-        async function importPublicKey(pem) {
-            const header = "-----BEGIN PUBLIC KEY-----";
-            const footer = "-----END PUBLIC KEY-----";
-            const formattedPem = `${header}\n${pem}\n${footer}`;
-            const binaryDerString = window.atob(formattedPem.replace(/-----(BEGIN|END) PUBLIC KEY-----/g, ''));
-            const binaryDer = new Uint8Array(binaryDerString.length);
-            for (let i = 0; i < binaryDerString.length; i++) {
-                binaryDer[i] = binaryDerString.charCodeAt(i);
-            }
-
-            return await crypto.subtle.importKey(
-                "spki",
-                binaryDer.buffer,
-                {
-                    name: "RSA-OAEP",
-                    hash: {name: "SHA-256"}
-                },
-                true,
-                ["encrypt"]
-            );
-        }
     </script>
 </body>
+
 </html>

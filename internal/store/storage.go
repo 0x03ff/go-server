@@ -12,18 +12,25 @@ import (
 
 type UsersRepository interface {
 		Create(context.Context, *models.User) error
-		Login(ctx context.Context, username string, password string) (*models.User, error)
+		Login(ctx context.Context, username string, password string,recover string) (*models.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 		GetUserByUsername(ctx context.Context, username string) (*models.User, error)
+		GetUserECDHPrivateKey(ctx context.Context,user *models.User) ([]byte, error)
+		GetUserECDHPublicKey(ctx context.Context,user *models.User) ([]byte, error)
+
 	}
 
 type SystemKeyRepository interface {
-		GetPublicKey(ctx context.Context, user *models.SystemKey) (string,error)
-		GetPrivateKey(ctx context.Context, user *models.SystemKey) (string,error)
-		
+		GetECDSAPublicKey(ctx context.Context, system *models.SystemKey) ([]byte,error)
+		GetECDSAPrivateKey(ctx context.Context, system *models.SystemKey) ([]byte,error)
+		GetECDHPublicKey(ctx context.Context, system *models.SystemKey) ([]byte, error)
+		GetECDHPrivateKey(ctx context.Context, system *models.SystemKey) ([]byte, error)
 	}
 type FileRepository interface {
 	 Upload(ctx context.Context, user *models.File) (err error)
+	 Search(ctx context.Context, userID uuid.UUID, index int) ([]*models.File, error) 
+	 
+	 GetFileById(ctx context.Context, file *models.File, id int) error
 }
 
 type Storage struct {

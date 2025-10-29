@@ -10,4 +10,8 @@ type SystemKey struct {
 
 	PrivateKey []byte `json:"-"`
 
+	ECDH_PublicKey []byte    `json:"ECDH_public_key"`
+
+	ECDH_PrivateKey []byte `json:"-"`
+
 }

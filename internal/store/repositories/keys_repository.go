@@ -19,8 +19,8 @@ func NewKeysRepository(db *pgxpool.Pool) *keysRepository {
 	return &keysRepository{db: db}
 }
 
-// GetPublicKey retrieves the public key for the specified user.
-func (r *keysRepository) GetPublicKey(ctx context.Context, system *models.SystemKey) (string, error) {
+// GetECDSAPublicKey retrieves the ECDSA public key for the specified user.
+func (r *keysRepository) GetECDSAPublicKey(ctx context.Context, system *models.SystemKey) ([]byte, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT id, public_key 
 		FROM system_keys 
@@ -29,14 +29,14 @@ func (r *keysRepository) GetPublicKey(ctx context.Context, system *models.System
 
 	err := row.Scan(&system.ID, &system.PublicKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve public key: %w", err)
+		return nil, fmt.Errorf("failed to retrieve system public key: %w", err)
 	}
 
-	return string(system.PublicKey), nil
+	return system.PublicKey, nil
 }
 
-// GetPrivateKey retrieves the private key for the specified user.
-func (r *keysRepository) GetPrivateKey(ctx context.Context, system *models.SystemKey) (string, error) {
+// GetECDSAPrivateKey retrieves the ECDSA private key for the server.
+func (r *keysRepository) GetECDSAPrivateKey(ctx context.Context, system *models.SystemKey) ([]byte, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT id, private_key 
 		FROM system_keys 
@@ -45,14 +45,48 @@ func (r *keysRepository) GetPrivateKey(ctx context.Context, system *models.Syste
 
 	err := row.Scan(&system.ID, &system.PrivateKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve private key: %w", err)
+		return nil, fmt.Errorf("failed to retrieve system private key: %w", err)
 	}
 
-	return string(system.PrivateKey), nil
+	return system.PrivateKey, nil
 }
 
 
 
 
 
+
+
+
+// GetECDHPublicKey retrieves the ECDH public key for the specified user.
+func (r *keysRepository) GetECDHPublicKey(ctx context.Context, system *models.SystemKey) ([]byte, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT id, ecdh_public_key 
+		FROM system_keys 
+		LIMIT 1
+	`)
+
+	err := row.Scan(&system.ID, &system.ECDH_PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve system public key: %w", err)
+	}
+
+	return system.ECDH_PublicKey, nil
+}
+
+// GetECDHPrivateKey retrieves the ECDH private key for the server.
+func (r *keysRepository) GetECDHPrivateKey(ctx context.Context, system *models.SystemKey) ([]byte, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT id, ecdh_private_key 
+		FROM system_keys 
+		LIMIT 1
+	`)
+
+	err := row.Scan(&system.ID, &system.ECDH_PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve system private key: %w", err)
+	}
+
+	return system.ECDH_PrivateKey, nil
+}
 

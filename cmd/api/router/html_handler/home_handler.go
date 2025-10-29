@@ -15,13 +15,6 @@ import (
 func (h *HtmlHandlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
     user_id := chi.URLParam(r, "user_id")
 
-    if user_id == "" {
-        http.Error(w, "User ID not found in URL path", http.StatusBadRequest)
-        return
-    }
-
-    log.Printf("User ID from URL: %s", user_id)
-
     // Get the token from the cookie
     tokenCookie, err := r.Cookie("token")
     if err != nil {
@@ -32,22 +25,15 @@ func (h *HtmlHandlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
 
     tokenStr := tokenCookie.Value
 
-    if tokenStr == "" {
-        log.Println("Invalid token format.")
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
-        return
-    }
-
-    log.Printf("Token from cookie: %s", tokenStr)
-
     systemRepo := repositories.NewKeysRepository(h.dbPool)
-    // Verify the token
     tokenObj, err := utils.VerifyToken(tokenStr, systemRepo)
+
     if err != nil {
-        log.Printf("Token verification failed: %v", err)
+        log.Printf("tokenStr not found: %v", err)
         http.Redirect(w, r, "/login", http.StatusSeeOther)
         return
     }
+    
 
     // Extract claims from the token
     claims := tokenObj.Claims.(jwt.MapClaims)
@@ -57,12 +43,7 @@ func (h *HtmlHandlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
     log.Printf("User ID from token: %s", userIdClaim)
     log.Printf("User Name from token: %s", userNameClaim)
 
-    // Check if the user_id in the URL matches the user_id in the token
-    if userIdClaim != user_id {
-        log.Println("User ID mismatch.")
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
-        return
-    }
+    
 
     // Load and parse the template
     tmpl, err := template.ParseFiles("web/html/home.html")
@@ -80,7 +61,6 @@ func (h *HtmlHandlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
         UserID:   user_id,
     }
 
-    log.Printf("Rendering template with data: %+v", data)
 
     err = tmpl.Execute(w, data)
     if err != nil {

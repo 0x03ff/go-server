@@ -1,6 +1,0 @@
-package htmlhandler
-
-import (
-	"net/http"
-)
-

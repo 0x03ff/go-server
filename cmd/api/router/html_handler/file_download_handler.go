@@ -1,16 +1,13 @@
 package html_handler
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"html/template"
 	"net/http"
 
 	"github.com/0x03ff/golang/internal/store/repositories"
 	"github.com/0x03ff/golang/utils"
-	"github.com/golang-jwt/jwt/v5"
-
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func (h *HtmlHandlers) FileDownloadHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +42,11 @@ func (h *HtmlHandlers) FileDownloadHandler(w http.ResponseWriter, r *http.Reques
 
 	// Extract claims from the token
 	claims := tokenObj.Claims.(jwt.MapClaims)
-	userIdClaim := claims["user_id"].(string)
+	userIdClaim, ok := claims["user_id"].(string)
+	if !ok {
+		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		return
+	}
 
 	// Check if the user_id in the URL matches the user_id in the token
 	if userIdClaim != user_id {
@@ -53,21 +54,7 @@ func (h *HtmlHandlers) FileDownloadHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-
-	// Generate a random AES key
-	aesKey := make([]byte, 32)
-	_, err = rand.Read(aesKey)
-	if err != nil {
-		http.Error(w, "Failed to generate AES key", http.StatusInternalServerError)
-		return
-	}
-
-	
-
-	// Encode the encrypted key in base64
-	encodedKey := base64.StdEncoding.EncodeToString(aesKey)
-
-	// Example: Render a template with the user_id and public key
+	// Render the template with just the user_id
 	tmpl, err := template.ParseFiles("web/html/file_download.html")
 	if err != nil {
 		http.Error(w, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -75,9 +62,9 @@ func (h *HtmlHandlers) FileDownloadHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	err = tmpl.Execute(w, map[string]interface{}{
-		"UserID":      user_id,
-		"SessionKey":  encodedKey,
+		"UserID": user_id,
 	})
+
 	if err != nil {
 		http.Error(w, "Template execution error: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -75,9 +75,12 @@ func (app *Application) GetJsonHandlers() *json_handler.JsonHandlers {
 func (app *Application) Mount() http.Handler {
     setupFunc := func(r chi.Router) {
 
-        html_handler.SetupHtmlRoutes(r, app)
 
 		json_handler.SetupJsonRoutes(r, app)
+
+
+        html_handler.SetupHtmlRoutes(r, app)
+
     }
     return router.SetupRoutes(setupFunc)
 }

@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 .vscode/
+
+# python , c,c++
+.py
+.c
+.cpp

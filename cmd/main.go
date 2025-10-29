@@ -10,6 +10,7 @@ import (
 	"github.com/0x03ff/golang/cmd/api/router/json_handler"
 	"github.com/0x03ff/golang/internal/db"
 	"github.com/0x03ff/golang/internal/store"
+	"github.com/0x03ff/golang/utils"
 )
 
 func main() {
@@ -37,6 +38,14 @@ func main() {
 
     // set drop_flag to drop the database:
     drop_flag := true
+
+    if drop_flag {
+        // Delete all folders and their contents under /assets/users/
+        err = utils.DeleteDirectoryContents("assets/users")
+        if err != nil {
+            log.Fatal("Failed to delete user assets: ", err)
+        }
+    }
 
     PDPool, err := db.NewPostgresPool(cfg.DB.DB_addr, cfg.DB.MaxOpenConns, cfg.DB.MaxIdleConns, cfg.DB.MaxIdleTime, drop_flag)
     if err != nil {

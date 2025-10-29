@@ -33,6 +33,11 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
 	}	
+	err = utils.ValidateInput("Recover key", user.Recover, 6, 20)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	userRepo := repositories.NewUsersRepository(h.dbPool)
 	err = userRepo.Create(r.Context(), &user)

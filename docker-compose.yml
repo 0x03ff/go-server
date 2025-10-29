@@ -1,5 +1,3 @@
-
-
 services:
   db:
     image: postgres:15
@@ -15,23 +13,6 @@ services:
     restart: unless-stopped
     networks:
       - app_network
-
-  server: 
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: go_app 
-    ports:
-      - "8080:8080"
-    environment:
-      DB_ADDR: "postgres://comp4334:secret@db:5432/go_server?sslmode=disable"
-    depends_on:
-      - db
-    restart: unless-stopped
-    networks:
-      - app_network
-    volumes:
-      - ./internal/certs:/app/internal/certs
 
 volumes:
   postgres_data:

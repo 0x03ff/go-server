@@ -21,6 +21,12 @@
             <label for="confirm_password">Please input user password again: 8-20 Characters</label><br>
             <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" maxlength="20" required>
 
+            <label for="recover">Please input user recover key: 6-20 Characters</label><br>
+            <input type="password" id="recover" name="recover" placeholder="Recover" maxlength="20" required>
+
+            <label for="confirm_recover">Please input user recover key again: 6-20 Characters</label><br>
+            <input type="password" id="confirm_recover" name="confirm_recover" placeholder="Confirm Password" maxlength="20" required>
+
             <button type="submit">Register</button>
         </form>
 
@@ -38,6 +44,8 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm_password').value;
+            const recover = document.getElementById('recover').value;
+            const confirmRecover = document.getElementById('confirm_recover').value;
 
             if (username.length < 6 || username.length > 20) {
                 alert('User ID must be between 6 and 20 characters');
@@ -49,14 +57,26 @@
                 return;
             }
 
+            if (recover.length < 6 || recover.length > 20) {
+                alert('Recover must be between 6 and 20 characters');
+                return;
+            }
+
+
             if (password !== confirmPassword) {
                 alert('Passwords do not match');
                 return;
             }
 
+            if (recover !== confirmRecover) {
+                alert('Recover keys do not match');
+                return;
+            }
+
             const userData = {
                 username,
-                password
+                password,
+                recover
             };
 
             try {

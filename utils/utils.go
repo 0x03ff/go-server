@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -14,6 +13,8 @@ import (
 	"html"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -21,7 +22,10 @@ import (
 	"github.com/0x03ff/golang/internal/store/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/microcosm-cc/bluemonday"
 )
+
+//1. user function
 
 // Envelope is a generic type for standardizing API responses
 type Envelope map[string]interface{}
@@ -36,6 +40,7 @@ type CustomError struct {
 func (e *CustomError) Error() string {
 	return e.Message
 }
+
 func MessageToUser(messageToUser string, locationPage string) {
 	safeMessage := html.EscapeString(messageToUser)
 	fmt.Printf("<script>alert('%s'); window.location.href='../../%s';</script>", safeMessage, locationPage)
@@ -46,16 +51,26 @@ func SendError(w http.ResponseWriter, code int, message string) {
 	json.NewEncoder(w).Encode(Envelope{"error": message})
 }
 
-func HashFile(data string) (string, error) {
-	hasher := sha256.New()
-	_, err := hasher.Write([]byte(data))
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(hasher.Sum(nil)), nil
+
+
+func SanitizeHTML(input string) string {
+    // Sanitize the input using bluemonday
+    policy := bluemonday.UGCPolicy()
+    clean := policy.Sanitize(input)
+    return clean
 }
 
 func ValidateInput(description string, data string, lower_limit int, upper_limit int) error {
+	
+	// Sanitize the input to prevent XSS
+    sanitizedData := SanitizeHTML(data)
+
+    // Check if the sanitized data is different from the original data
+    if sanitizedData != data {
+        return errors.New("invalid input detected")
+    }
+	
+	
 	if len(data) < lower_limit || len(data) > upper_limit {
 		temp := description + " must be between " + strconv.Itoa(lower_limit) + " and " + strconv.Itoa(upper_limit) + " characters"
 		return errors.New(temp)
@@ -64,6 +79,8 @@ func ValidateInput(description string, data string, lower_limit int, upper_limit
 	return nil
 }
 
+
+// 2. user JWT 
 func GenerateToken(ctx context.Context, userID uuid.UUID, userName string, systemRepo store.SystemKeyRepository) (string, error) {
 	const JWT_EXPIRATION = time.Hour * 24
 
@@ -71,25 +88,13 @@ func GenerateToken(ctx context.Context, userID uuid.UUID, userName string, syste
 
 	var systemKey models.SystemKey
 
-	privateKeyPem, err := systemRepo.GetPrivateKey(ctx, &systemKey)
+	privateKeyPem, err := systemRepo.GetECDSAPrivateKey(ctx, &systemKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to get private key: %w", err)
 	}
 
-	// Debugging: Print the retrieved private key
-	fmt.Printf("Retrieved Private Key: %s\n", privateKeyPem)
-
-	// Decode the base64-encoded private key
-	privateKeyBytes, err := base64.StdEncoding.DecodeString(privateKeyPem)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode base64 private key: %w", err)
-	}
-
-	// Debugging: Print the decoded private key bytes
-	fmt.Printf("Decoded Private Key Bytes: %x\n", privateKeyBytes)
-
 	// Decode the PEM block
-	block, _ := pem.Decode(privateKeyBytes)
+	block, _ := pem.Decode(privateKeyPem)
 	if block == nil {
 		return "", fmt.Errorf("failed to decode private key PEM")
 	}
@@ -127,7 +132,7 @@ func VerifyToken(tokenString string, systemRepo store.SystemKeyRepository) (*jwt
     // Fetch the public key from the system repository
     systemKey := &models.SystemKey{}
 
-    publicKeyPem, err := systemRepo.GetPublicKey(context.Background(), systemKey)
+    publicKeyPem, err := systemRepo.GetECDSAPublicKey(context.Background(), systemKey)
 
 	
     if err != nil {
@@ -135,15 +140,8 @@ func VerifyToken(tokenString string, systemRepo store.SystemKeyRepository) (*jwt
     }
 
 
-    // Decode the base64-encoded public key
-    publicKeyBytes, err := base64.StdEncoding.DecodeString(publicKeyPem)
-    if err != nil {
-        return nil, fmt.Errorf("failed to decode base64 public key: %w", err)
-    }
-
-
     // Decode the PEM block
-    block, rest := pem.Decode(publicKeyBytes)
+    block, rest := pem.Decode(publicKeyPem)
     if block == nil || len(rest) > 0 {
         return nil, errors.New("failed to decode public key PEM")
     }
@@ -185,6 +183,48 @@ func VerifyToken(tokenString string, systemRepo store.SystemKeyRepository) (*jwt
     }
 
     return token, nil
+}
+
+// 3. system function
+
+func HashFile(data string) (string, error) {
+	hasher := sha256.New()
+	_, err := hasher.Write([]byte(data))
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+func DeleteDirectoryContents(dirPath string) error {
+    // Read the directory
+    entries, err := os.ReadDir(dirPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return nil // Directory does not exist, nothing to delete
+        }
+        return err
+    }
+
+    // Remove each entry in the directory
+    for _, entry := range entries {
+        entryPath := filepath.Join(dirPath, entry.Name())
+        if entry.IsDir() {
+            // Recursively delete subdirectories
+            err = os.RemoveAll(entryPath)
+            if err != nil {
+                return err
+            }
+        } else {
+            // Delete files
+            err = os.Remove(entryPath)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    return nil
 }
 
 

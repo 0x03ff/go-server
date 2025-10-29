@@ -1,48 +1,273 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Files</title>
-    <link href="/assets/css/remain_page.css" rel="stylesheet" type="text/css">
-        <link rel="icon" href="/assets/image/storage_icon.ico">
-
-
+    <link href="/assets/css/download_page.css" rel="stylesheet" type="text/css">
+    <link rel="icon" href="/assets/image/storage_icon.ico">
 </head>
+
 <body>
-<div class="container">
+    <div class="container">
         <div class="sidebar">
             <a href="/home/{{.UserID}}">Home</a><br>
             <a href="/file_upload/{{.UserID}}">Upload file</a><br>
-            <a href="/file_download/{{.UserID}}">Download file</a><br>
+            <a href="/file_download/{{.UserID}}" class="active">Download file</a><br>
             <a href="/logout/{{.UserID}}">Logout</a><br>
         </div>
         <div class="main-content">
-            
-        <h1>Online Storage System</h1>
+            <header>
+                <h1>Online Storage System</h1>
+            </header>
 
-        <div class="card">
-            
-        <h3>Your file</h3>
+            <div class="card">
+                <h3>Your Files</h3>
 
-    
-        <table border="1" align="center">
-            <tr>
-                <th>Poll Name</th>
-                <th>Poll Question</th>
-                <th>Your Vote</th>
-            </tr>
-            
-           
-        </table>
-    
-        <p>No votes found.</p>
-    
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Loading files...</p>
+                </div>
 
-    <div class="pagination">
-       
-         <p>next Page</p>
+                <div id="error-message"
+                    style="display: none; color: red; padding: 10px; background-color: #ffebee; margin: 10px 0; border-radius: 4px;">
+                </div>
+
+                <table class="file-table" id="files-table">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Uploaded On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="files-list">
+                    </tbody>
+                </table>
+
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <img src="/assets/image/empty_folder.png" alt="No files"
+                        style="width: 100px; height: 100px; opacity: 0.3;">
+                    <p>You haven't uploaded any files yet</p>
+                </div>
+
+                <div class="pagination" id="pagination">
+                    <button id="prev-page" disabled>Previous</button>
+                    <span id="page-info">Page 1</span>
+                    <button id="next-page">Next</button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <script type="module">
+        // CRITICAL: Helper function to convert base64 to ArrayBuffer
+        // This is ONLY used if your API returns base64 (which it shouldn't for large files)
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // MAIN DOWNLOAD AND DECRYPTION FUNCTION - COMPLETELY REVISED
+        async function downloadSecure(url, filename) {
+            try {
+                // 1. FIRST CHECK IF WE HAVE THE NECESSARY KEYS
+                if (!sessionStorage.getItem('encrypted_private_key') || 
+                    !sessionStorage.getItem('server_public_key')) {
+                    throw new Error("Encryption keys missing. Please re-login.");
+                }
+
+                // 2. FETCH THE FILE AS RAW BINARY DATA
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Download failed (${response.status}): ${errorText}`);
+                }
+
+                // 3. GET THE RAW BINARY DATA - NO TEXT CONVERSION!
+                const encryptedArrayBuffer = await response.arrayBuffer();
+                
+                // 4. DEBUG: Check data format (first 16 bytes should be the counter)
+                console.log("Downloaded file size:", encryptedArrayBuffer.byteLength);
+                if (encryptedArrayBuffer.byteLength > 16) {
+                    const firstBytes = new Uint8Array(encryptedArrayBuffer, 0, 16);
+                    console.log("First 16 bytes (should be counter):", 
+                        Array.from(firstBytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                }
+
+                // 5. DECRYPT THE FILE
+                const { ECDH_decryption } = await import('/assets/js/ECDH_384.js');
+                const decryptedArrayBuffer = await ECDH_decryption(encryptedArrayBuffer);
+                
+                // 6. CREATE BLOB AND TRIGGER DOWNLOAD
+                const blob = new Blob([decryptedArrayBuffer]);
+                const urlObject = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = urlObject;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // 7. CLEANUP
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(urlObject);
+                }, 100);
+                
+                console.log("File successfully decrypted and downloaded!");
+                return true;
+                
+            } catch (error) {
+                console.error('Decryption process failed:', error);
+                
+                // Enhanced error reporting
+                let errorMessage = `Failed to decrypt: ${error.message}`;
+                
+                if (error.message.includes("length")) {
+                    errorMessage += "\n\nPossible causes:\n" +
+                                   "- Counter length mismatch (should be 16 bytes)\n" +
+                                   "- File corrupted during upload/download";
+                } else if (error.message.includes("key")) {
+                    errorMessage += "\n\nPossible causes:\n" +
+                                   "- Encryption keys missing or invalid\n" +
+                                   "- Session expired - try logging in again";
+                }
+                
+                const errorElement = document.getElementById('error-message');
+                errorElement.textContent = errorMessage;
+                errorElement.style.display = 'block';
+                
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get user ID from the URL
+            const pathParts = window.location.pathname.split('/');
+            const userID = pathParts[2]; // Assuming URL is /file_download/{userID}
+
+            // State variables
+            let currentIndex = 0;
+
+            // DOM elements
+            const filesList = document.getElementById('files-list');
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+            const emptyState = document.getElementById('empty-state');
+
+            // Fetch files from the JSON API
+            async function fetchFiles() {
+                try {
+                    // Show loading indicator
+                    loading.style.display = 'block';
+                    errorMessage.style.display = 'none';
+                    filesList.innerHTML = '';
+
+                    // Call the JSON API
+                    const response = await fetch(`/api/files/${userID}?index=${currentIndex}`);
+
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Update UI with pagination info
+                    updatePaginationControls(data);
+
+                    // Display the files
+                    if (data.files && data.files.length > 0) {
+                        renderFiles(data.files);
+                        emptyState.style.display = 'none';
+                    } else {
+                        emptyState.style.display = 'block';
+                    }
+
+                } catch (error) {
+                    errorMessage.textContent = `Error loading files: ${error.message}`;
+                    errorMessage.style.display = 'block';
+                    console.error('Error fetching files:', error);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            }
+
+            // Render files in the table
+            function renderFiles(files) {
+                filesList.innerHTML = '';
+
+                files.forEach(file => {
+                    // Format the date for display
+                    const date = new Date(file.created_at);
+                    const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+
+                    // Create table row
+                    const row = document.createElement('tr');
+                    
+                    // Store original filename for decryption
+                    row.innerHTML = `
+                        <td>${file.title}</td>
+                        <td>${formattedDate}</td>
+                        <td>
+                            <button class="download-btn" data-file-id="${file.id}" data-filename="${file.title}">
+                                Download
+                            </button>
+                        </td>
+                    `;
+
+                    filesList.appendChild(row);
+                });
+
+                // Add event listeners to download buttons
+                document.querySelectorAll('.download-btn').forEach(button => {
+                    button.addEventListener('click', function () {
+                        const fileID = this.getAttribute('data-file-id');
+                        const filename = this.getAttribute('data-filename');
+                        
+                        // Use the direct download URL
+                        const downloadUrl = `/api/download/${userID}/${fileID}`;
+                        downloadSecure(downloadUrl, filename);
+                    });
+                });
+            }
+
+            // Update pagination controls based on API response
+            function updatePaginationControls(data) {
+                // Calculate current page number (1-based)
+                const page = (currentIndex / 10) + 1;
+
+                pageInfo.textContent = `Page ${Math.floor(page)}`;
+                prevPageBtn.disabled = !data.has_prev;
+                nextPageBtn.disabled = !data.has_next;
+            }
+
+            // Event listeners for pagination buttons
+            prevPageBtn.addEventListener('click', function () {
+                if (currentIndex >= 10) {
+                    currentIndex -= 10;
+                    fetchFiles();
+                }
+            });
+
+            nextPageBtn.addEventListener('click', function () {
+                currentIndex += 10;
+                fetchFiles();
+            });
+
+            // Initial load of files
+            fetchFiles();
+        });
+    </script>
 </body>
+
 </html>

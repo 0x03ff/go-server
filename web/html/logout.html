@@ -16,7 +16,13 @@
 
     <script>
         // Remove the token from sessionStorage
-        sessionStorage.removeItem('token');
+        
+
+        sessionStorage.removeItem('encrypted_private_key');
+        sessionStorage.removeItem('server_public_key');
+        sessionStorage.removeItem('user_recover');
+
+
 
         // Redirect to the login page after a short delay
         setTimeout(function() {

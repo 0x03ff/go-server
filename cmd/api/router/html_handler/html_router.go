@@ -1,6 +1,7 @@
 package html_handler
 
 import (
+	"github.com/0x03ff/golang/cmd/api/router"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -25,10 +26,14 @@ func SetupHtmlRoutes(r chi.Router, app App) {
 	r.Get("/register", handlers.RegisterHandler)
 
 
-	r.Get("/transfer/{user_id}", handlers.TransferHandler)
 
-	r.Get("/home/{user_id}", handlers.HomeHandler)
-	r.Get("/file_download/{user_id}", handlers.FileDownloadHandler)
-	r.Get("/file_upload/{user_id}", handlers.FileUploadHandler)
-	r.Get("/logout/{user_id}", handlers.LogoutHandler)
+	authMiddleware := router.JWTMiddleware(handlers.dbPool)
+
+    r.With(authMiddleware).Get("/transfer/{user_id}", handlers.TransferHandler)
+    r.With(authMiddleware).Get("/home/{user_id}", handlers.HomeHandler)
+    r.With(authMiddleware).Get("/file_download/{user_id}", handlers.FileDownloadHandler)
+    r.With(authMiddleware).Get("/file_upload/{user_id}", handlers.FileUploadHandler)
+    r.With(authMiddleware).Get("/logout/{user_id}", handlers.LogoutHandler)
+
+
 }
