@@ -9,7 +9,7 @@ sudo docker compose -f 'docker-compose.yml' up -d --build
 
 for development golang
 
-go build  -o main ./cmd/api/ && ./main
+go build  -o ./bin/main ./cmd/ && ./bin/main
 
 For use browser, You may need import the ca_cert.pem in browser setting.
 

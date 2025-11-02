@@ -79,7 +79,8 @@
             try {
                 // 1. FIRST CHECK IF WE HAVE THE NECESSARY KEYS
                 if (!sessionStorage.getItem('encrypted_private_key') || 
-                    !sessionStorage.getItem('server_public_key')) {
+                    !sessionStorage.getItem('server_public_key') ||
+                    !sessionStorage.getItem('user_recover') ) {
                     throw new Error("Encryption keys missing. Please re-login.");
                 }
 
@@ -235,7 +236,7 @@
                         const filename = this.getAttribute('data-filename');
                         
                         // Use the direct download URL
-                        const downloadUrl = `/api/download/${userID}/${fileID}`;
+                        const downloadUrl = `/api/download_file/${userID}/${fileID}`;
                         downloadSecure(downloadUrl, filename);
                     });
                 });

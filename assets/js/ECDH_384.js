@@ -1,19 +1,101 @@
 // ecdh-aes.js
-function base64ToArrayBuffer(base64) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+export async function generateECDHKeyPairP384(hash) {
+    try {
+        // Generate ECDH key pair for P-384
+        const keyPair = await crypto.subtle.generateKey(
+            {
+                name: "ECDH",
+                namedCurve: "P-384"
+            },
+            true,
+            ["deriveKey", "deriveBits"]
+        );
+
+        // Export private key in PKCS#8 DER format
+        const privKeyDer = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+        const privKeyPem = convertDerToPem(privKeyDer, "PRIVATE KEY");
+
+        // Export public key in SPKI (PKIX) DER format
+        const pubKeyDer = await crypto.subtle.exportKey("spki", keyPair.publicKey);
+        const pubKeyPem = convertDerToPem(pubKeyDer, "PUBLIC KEY");
+
+        // Convert PEM string to ArrayBuffer before encryption
+        const privKeyBuffer = new TextEncoder().encode(privKeyPem).buffer;
+
+        // Encrypt the private key (correct parameter order: key, data)
+        const encryptedPrivateKey = await encryptWithAESCTR(
+            await convertHashToCryptoKey(hash),
+            privKeyBuffer
+        );
+
+        // Convert the encrypted data to base64 for JSON serialization
+        const encryptedPrivateKeyBase64 = arrayBufferToBase64(encryptedPrivateKey);
+
+        return {
+            publicKey: pubKeyPem,
+            privateKey: encryptedPrivateKeyBase64
+        };
+    } catch (err) {
+        throw new Error(`Key generation failed: ${err.message}`);
     }
-    return bytes.buffer;
 }
 
-export async function hash256(message) {
+
+
+export async function ECDH_hash256(message) {
     const msgUint8 = new TextEncoder().encode(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     return new Uint8Array(hashBuffer);
 }
+
+async function convertHashToCryptoKey(hash) {
+    return crypto.subtle.importKey(
+        "raw",
+        hash,
+        { name: "AES-CTR" },
+        false,
+        ["encrypt","decrypt"]
+    );
+}
+
+export function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+
+
+// Helper: Convert DER to PEM (with 64-char line breaks)
+function convertDerToPem(derBuffer, keyType) {
+    const base64 = btoa(
+        String.fromCharCode(...new Uint8Array(derBuffer))
+    );
+
+    // Split base64 into 64-char lines
+    const lines = [];
+    for (let i = 0; i < base64.length; i += 64) {
+        lines.push(base64.substring(i, i + 64));
+    }
+
+    return `-----BEGIN ${keyType}-----\n${lines.join('\n')}\n-----END ${keyType}-----`;
+}
+
+
+
+
 
 async function pemToDer(pemString) {
     // Remove PEM headers and whitespace
@@ -21,7 +103,7 @@ async function pemToDer(pemString) {
         .replace(/-----BEGIN [^-]+-----/, '')
         .replace(/-----END [^-]+-----/, '')
         .replace(/\s+/g, '');
-    
+
     // Base64 decode the content
     const binaryString = atob(pemContent);
     const derBytes = new Uint8Array(binaryString.length);
@@ -32,16 +114,28 @@ async function pemToDer(pemString) {
 }
 
 async function ecc_384_user_private() {
+    const recover = sessionStorage.getItem('user_recover');
+    if (!recover) throw new Error("Missing user_recover in session");
+    
+    const hash_recover = await ECDH_hash256(recover);
     const base64Pem = sessionStorage.getItem('encrypted_private_key');
+    
     if (!base64Pem) throw new Error("Missing client private key in session");
-    
-    // Decode base64 to get raw PEM string
-    const pemString = atob(base64Pem);
-    
-    // Convert PEM to DER
+
+    //Convert base64 string directly to ArrayBuffer 
+    const encryptedData = base64ToArrayBuffer(base64Pem);
+    // Decrypt the ArrayBuffer
+    const decryptedBuffer = await decryptWithAESCTR(
+        await convertHashToCryptoKey(hash_recover),
+        encryptedData
+    );
+
+    // FIX 2: Convert decrypted ArrayBuffer to string (PEM content)
+    const pemString = new TextDecoder().decode(decryptedBuffer);
+
+    // Convert PEM string to DER
     const derBuffer = await pemToDer(pemString);
-    
-    // Import as Web Crypto key
+
     return crypto.subtle.importKey(
         "pkcs8",
         derBuffer,
@@ -51,16 +145,17 @@ async function ecc_384_user_private() {
     );
 }
 
+
 async function ecc_384_server_public() {
     const base64Pem = sessionStorage.getItem('server_public_key');
     if (!base64Pem) throw new Error("Missing server public key in session");
-    
+
     // Decode base64 to get raw PEM string
     const pemString = atob(base64Pem);
-    
+
     // Convert PEM to DER
     const derBuffer = await pemToDer(pemString);
-    
+
     // Import as Web Crypto key
     return crypto.subtle.importKey(
         "spki",
@@ -101,7 +196,7 @@ async function getECDHSharedSecret() {
 async function encryptWithAESCTR(key, arrayBuffer) {
     // CTR mode uses a 16-byte counter (96-bit nonce + 32-bit counter)
     const counter = crypto.getRandomValues(new Uint8Array(16));
-    
+
     try {
         const ciphertext = await crypto.subtle.encrypt(
             { name: "AES-CTR", counter, length: 32 },  // Critical: length=32
@@ -123,7 +218,7 @@ async function encryptWithAESCTR(key, arrayBuffer) {
 
 async function decryptWithAESCTR(key, arrayBuffer) {
     const data = new Uint8Array(arrayBuffer);
-    
+
     // CTR counter is 16 bytes
     const counterSize = 16;
     if (data.length < counterSize) {

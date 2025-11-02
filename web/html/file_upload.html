@@ -47,16 +47,16 @@
         document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('file');
             const fileNameInput = document.getElementById('file_name');
-            
+
             // Track the selected file's extension
             let fileExtension = '';
             let originalFileName = '';
-            
-            fileInput.addEventListener('change', function() {
+
+            fileInput.addEventListener('change', function () {
                 if (this.files.length > 0) {
                     originalFileName = this.files[0].name;
                     const lastDotIndex = originalFileName.lastIndexOf('.');
-                    
+
                     if (lastDotIndex > 0) {
                         fileExtension = originalFileName.substring(lastDotIndex + 1); // Get extension without dot
                     } else {
@@ -88,18 +88,27 @@
                 const responseMessage = document.getElementById('response-message');
 
                 try {
+                    // Verify encryption keys still exist
+                    if (!sessionStorage.getItem('encrypted_private_key') ||
+                        !sessionStorage.getItem('server_public_key') ||
+                        !sessionStorage.getItem('user_recover')
+                    ) {
+                        throw new Error("Encryption keys missing. Please re-login.");
+                    }
+
+
                     const file = document.getElementById('file').files[0];
-                    
+
                     // Combine user filename with original extension
                     const userFilename = fileNameInput.value.trim();
                     const finalFileName = userFilename + (fileExtension ? '.' + fileExtension : '');
-                    
+
                     // Encrypt the file
                     const encryptedArrayBuffer = await ECDH_encryption(await file.arrayBuffer());
-                    
+
                     // Add extension to form data (critical for server-side)
                     formData.append('extension', fileExtension);
-                    
+
                     // Set the file with the final name
                     formData.set('file', new Blob([encryptedArrayBuffer]), finalFileName);
 

@@ -37,13 +37,9 @@ func (h *HtmlHandlers) HomeHandler(w http.ResponseWriter, r *http.Request) {
 
     // Extract claims from the token
     claims := tokenObj.Claims.(jwt.MapClaims)
-    userIdClaim := claims["user_id"].(string)
     userNameClaim := claims["user_name"].(string)
 
-    log.Printf("User ID from token: %s", userIdClaim)
-    log.Printf("User Name from token: %s", userNameClaim)
 
-    
 
     // Load and parse the template
     tmpl, err := template.ParseFiles("web/html/home.html")

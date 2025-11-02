@@ -16,7 +16,6 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		utils.SendError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-
 	// Validate user data
 	if user.Username == "" || user.Password == "" {
 		utils.SendError(w, http.StatusBadRequest, "Invalid user data")
@@ -38,6 +37,7 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	
 
 	userRepo := repositories.NewUsersRepository(h.dbPool)
 	err = userRepo.Create(r.Context(), &user)
@@ -48,5 +48,8 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(utils.Envelope{"message": "User registered successfully"})
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User registered successfully",
+	})
 }

@@ -17,7 +17,6 @@ func (h *HtmlHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("User %s is logging out", user_id)
 
 	// Clear the JWT token from the cookie
 	cookie := &http.Cookie{

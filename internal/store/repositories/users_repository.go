@@ -4,7 +4,7 @@ package repositories
 import (
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -36,6 +36,7 @@ func (r *usersRepository) Create(ctx context.Context, user *models.User) error {
 	if exists {
 		return fmt.Errorf("user name already exists")
 	}
+	
 	hashedPassword, err := HashPassword(user.Password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password")
@@ -43,30 +44,19 @@ func (r *usersRepository) Create(ctx context.Context, user *models.User) error {
 
 	user.Password = hashedPassword
 
-	hashedRecover, err := HashPassword(user.Recover)
+	hash_recover := GenerateHash256(user.Recover)
+	hashedRecover, err := HashPassword(string(hash_recover))
 	if err != nil {
 		return fmt.Errorf("failed to hash Recover token")
 	}
 
-	publicKey, privateKey, err := GenerateECDHKeyPair()
-	if err != nil {
-		log.Fatalf("Failed to generate user ECC key pair: %v", err)
-	}
 
-	println("user.Recover:    ", string(user.Recover))
-
-
-	if err != nil {
-		log.Fatalf("Failed to encrypt user ECC key pair: %v", err)
-	}
-
-	// user recover is under b-crypt now
 	user.Recover = hashedRecover
 
 	_, err = r.db.Exec(ctx,
 		`INSERT INTO users (id, username, password,recover,ecdh_public_key,ecdh_encrypt_private_key, created_at)
          VALUES (DEFAULT,$1, $2, $3,$4, $5, DEFAULT)`,
-		user.Username, user.Password, user.Recover, publicKey, privateKey,
+		user.Username, user.Password, user.Recover, user.ECDH_PublicKey, user.ECDH_PrivateKey,
 	)
 	return err
 }
@@ -87,8 +77,9 @@ func (r *usersRepository) Login(ctx context.Context, username string, password s
 	if !CompareHashAndData(user.Password, password) {
 		return nil, fmt.Errorf("invalid password")
 	}
+	hash_recover := GenerateHash256(recover)
 
-	if !CompareHashAndData(user.Recover, recover) {
+	if !CompareHashAndData(user.Recover, string(hash_recover)) {
 		return nil, fmt.Errorf("invalid recover key")
 	}
 

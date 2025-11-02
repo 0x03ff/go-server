@@ -11,7 +11,7 @@ import (
 
 
 type UsersRepository interface {
-		Create(context.Context, *models.User) error
+		Create(ctx context.Context, user *models.User) error
 		Login(ctx context.Context, username string, password string,recover string) (*models.User, error)
 		GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 		GetUserByUsername(ctx context.Context, username string) (*models.User, error)

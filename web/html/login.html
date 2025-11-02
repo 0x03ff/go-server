@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,15 +8,20 @@
     <link href="/assets/css/login.css" rel="stylesheet" type="text/css">
     <link rel="icon" href="/assets/image/storage_icon.ico">
 </head>
+
 <body>
     <div class="login-container">
         <h2>Online Storage System</h2>
+        
+        <!-- Error message container -->
+        <div id="error-message" style="display: none; color: red; padding: 10px; background-color: #ffebee; border-radius: 4px; margin-bottom: 15px;"></div>
+        
         <form id="login-form">
             <p>Please input user ID:</p>
             <input type="text" id="username" name="username" placeholder="User name" required>
             <p>Please input user password:</p>
             <input type="password" id="password" placeholder="Password" required>
-            
+
             <label for="recover">Please input user recover key</label><br>
             <input type="password" id="recover" name="recover" placeholder="Recover" maxlength="20" required>
             <button type="submit">Login</button>
@@ -27,8 +33,32 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Check for error messages in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            
+            const errorMessages = {
+                'invalid_url': 'User ID not found in URL path. Please try again.',
+                'missing_token': 'Session expired. Please log in again.',
+                'empty_token': 'Invalid session. Please log in again.',
+                'invalid_token': 'Invalid session token. Please log in again.',
+                'invalid_claims': 'Session data corrupted. Please log in again.',
+                'missing_user_id': 'User ID missing from session. Please log in again.',
+                'id_mismatch': 'User ID mismatch. Please log in again.'
+            };
+            
+            const errorMessageElement = document.getElementById('error-message');
+            
+            if (error && errorMessages[error]) {
+                errorMessageElement.textContent = errorMessages[error];
+                errorMessageElement.style.display = 'block';
+                
+                // Remove the error parameter from the URL without reloading
+                const newUrl = window.location.pathname;
+                window.history.replaceState(null, null, newUrl);
+            }
 
-        document.addEventListener('DOMContentLoaded', async function() {
             const form = document.getElementById('login-form');
 
             if (!form) {
@@ -58,12 +88,10 @@
                     return;
                 }
 
-                
-
                 const userData = {
-                    username,
-                    password,
-                    recover
+                    "username": username,
+                    "password": password,
+                    "recover": recover
                 };
 
                 try {
@@ -78,7 +106,10 @@
                     if (!response.ok) {
                         const errorData = await response.text();
                         console.log('Raw error response:', errorData);
-                        alert('Login failed: ' + (errorData || 'Unknown error'));
+                        
+                        // Display error message from server
+                        errorMessageElement.textContent = 'Login failed: ' + (errorData || 'Unknown error');
+                        errorMessageElement.style.display = 'block';
                         return;
                     }
 
@@ -94,16 +125,19 @@
                     sessionStorage.setItem('server_public_key', server_public_key);
                     sessionStorage.setItem('user_recover', recover);
 
-                    // Redirect to home page
-                    window.location.href = `/home/${user_id}`;
+                    // Redirect to original page if available
+                    const redirect = urlParams.get('redirect') || `/home/${user_id}`;
+                    window.location.href = redirect;
 
                 } catch (error) {
                     console.error('An error occurred:', error);
-                    alert('An error occurred: ' + error.message);
+                    errorMessageElement.textContent = 'An error occurred: ' + error.message;
+                    errorMessageElement.style.display = 'block';
                 }
             });
         });
     </script>
 
 </body>
+
 </html>

@@ -48,5 +48,5 @@ func SetupJsonRoutes(r chi.Router, app App) {
 	
 	// Keep these as they are
 	r.With(authMiddleware).Post("/api/upload_file/{user_id}", handlers.UploadFileHandler)
-	r.With(authMiddleware).Get("/api/download/{user_id}/{file_id}", handlers.DownloadFileHandler)
+	r.With(authMiddleware).Get("/api/download_file/{user_id}/{file_id}", handlers.DownloadFileHandler)
 }

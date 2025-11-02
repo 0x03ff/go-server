@@ -3,6 +3,7 @@ package router
 import (
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/0x03ff/golang/internal/store/repositories"
 	"github.com/0x03ff/golang/utils"
@@ -14,15 +15,12 @@ import (
 func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("Incoming URL: %s", r.URL.Path)
 
-
-			
 			// Extract user_id from URL param
 			user_id := chi.URLParam(r, "user_id")
 			if user_id == "" {
 				log.Printf("User ID not found in URL path: %s", r.URL.Path)
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "invalid_url", "/login")
 				return
 			}
 
@@ -30,14 +28,14 @@ func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 			tokenCookie, err := r.Cookie("token")
 			if err != nil {
 				log.Printf("Token cookie not found: %v", err)
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "missing_token", "/login")
 				return
 			}
 
 			tokenStr := tokenCookie.Value
 			if tokenStr == "" {
 				log.Println("Empty token in cookie")
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "empty_token", "/login")
 				return
 			}
 
@@ -46,7 +44,7 @@ func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 			tokenObj, err := utils.VerifyToken(tokenStr, systemRepo)
 			if err != nil {
 				log.Printf("Token verification failed: %v", err)
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "invalid_token", "/login")
 				return
 			}
 
@@ -54,22 +52,21 @@ func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 			claims, ok := tokenObj.Claims.(jwt.MapClaims)
 			if !ok {
 				log.Println("Invalid token claims")
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "invalid_claims", "/login")
 				return
 			}
 
 			userIdClaim, ok := claims["user_id"].(string)
 			if !ok {
 				log.Println("user_id claim missing or invalid")
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "missing_user_id", "/login")
 				return
 			}
-
 
 			// Check if user_id in URL matches user_id in token
 			if userIdClaim != user_id {
 				log.Println("User ID mismatch between URL and token")
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				redirectWithError(w, r, "id_mismatch", "/login")
 				return
 			}
 
@@ -77,4 +74,17 @@ func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// Helper function to redirect with error message
+func redirectWithError(w http.ResponseWriter, r *http.Request, errorCode, path string) {
+	query := url.Values{}
+	query.Set("error", errorCode)
+	
+	// Preserve the original path for redirect after login
+	if r.URL.Path != "/login" {
+		query.Set("redirect", r.URL.Path)
+	}
+	
+	http.Redirect(w, r, path+"?"+query.Encode(), http.StatusSeeOther)
 }

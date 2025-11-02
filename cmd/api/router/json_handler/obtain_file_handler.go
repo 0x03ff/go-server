@@ -14,13 +14,6 @@ import (
 )
 
 
-
-
-
-
-
-
-
 func (h *JsonHandlers) ObtainFileHandler(w http.ResponseWriter, r *http.Request) {
 	user_id := chi.URLParam(r, "user_id")
 

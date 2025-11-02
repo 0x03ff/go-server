@@ -27,7 +27,7 @@ func main() {
     }
 
     cfg := config.Config{
-        ADDR: "localhost:8080",
+        ADDR: "0.0.0.0:443",
         DB: config.DBConfig{
             DB_addr:      "postgres://comp4334:secret@localhost:5432/go_server?sslmode=disable",
             MaxOpenConns: 25,

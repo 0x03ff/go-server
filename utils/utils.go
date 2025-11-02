@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"html"
 	"log"
 	"net/http"
 	"os"
@@ -28,7 +27,6 @@ import (
 //1. user function
 
 // Envelope is a generic type for standardizing API responses
-type Envelope map[string]interface{}
 
 // CustomError represents a structured error with status code and details
 type CustomError struct {
@@ -41,36 +39,31 @@ func (e *CustomError) Error() string {
 	return e.Message
 }
 
-func MessageToUser(messageToUser string, locationPage string) {
-	safeMessage := html.EscapeString(messageToUser)
-	fmt.Printf("<script>alert('%s'); window.location.href='../../%s';</script>", safeMessage, locationPage)
-}
-
 func SendError(w http.ResponseWriter, code int, message string) {
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(Envelope{"error": message})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": message,
+	})
+
 }
 
-
-
 func SanitizeHTML(input string) string {
-    // Sanitize the input using bluemonday
-    policy := bluemonday.UGCPolicy()
-    clean := policy.Sanitize(input)
-    return clean
+	// Sanitize the input using bluemonday
+	policy := bluemonday.UGCPolicy()
+	clean := policy.Sanitize(input)
+	return clean
 }
 
 func ValidateInput(description string, data string, lower_limit int, upper_limit int) error {
-	
-	// Sanitize the input to prevent XSS
-    sanitizedData := SanitizeHTML(data)
 
-    // Check if the sanitized data is different from the original data
-    if sanitizedData != data {
-        return errors.New("invalid input detected")
-    }
-	
-	
+	// Sanitize the input to prevent XSS
+	sanitizedData := SanitizeHTML(data)
+
+	// Check if the sanitized data is different from the original data
+	if sanitizedData != data {
+		return errors.New("invalid input detected")
+	}
+
 	if len(data) < lower_limit || len(data) > upper_limit {
 		temp := description + " must be between " + strconv.Itoa(lower_limit) + " and " + strconv.Itoa(upper_limit) + " characters"
 		return errors.New(temp)
@@ -79,8 +72,7 @@ func ValidateInput(description string, data string, lower_limit int, upper_limit
 	return nil
 }
 
-
-// 2. user JWT 
+// 2. user JWT
 func GenerateToken(ctx context.Context, userID uuid.UUID, userName string, systemRepo store.SystemKeyRepository) (string, error) {
 	const JWT_EXPIRATION = time.Hour * 24
 
@@ -129,60 +121,56 @@ func GenerateToken(ctx context.Context, userID uuid.UUID, userName string, syste
 
 func VerifyToken(tokenString string, systemRepo store.SystemKeyRepository) (*jwt.Token, error) {
 
-    // Fetch the public key from the system repository
-    systemKey := &models.SystemKey{}
+	// Fetch the public key from the system repository
+	systemKey := &models.SystemKey{}
 
-    publicKeyPem, err := systemRepo.GetECDSAPublicKey(context.Background(), systemKey)
+	publicKeyPem, err := systemRepo.GetECDSAPublicKey(context.Background(), systemKey)
 
-	
-    if err != nil {
-        return nil, fmt.Errorf("failed to get public key: %w", err)
-    }
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public key: %w", err)
+	}
 
-
-    // Decode the PEM block
-    block, rest := pem.Decode(publicKeyPem)
-    if block == nil || len(rest) > 0 {
-        return nil, errors.New("failed to decode public key PEM")
-    }
-
-    log.Printf("Decoded PEM block type: %s", block.Type)
-
-    // Parse the public key
-    publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-    if err != nil {
-        return nil, fmt.Errorf("failed to parse public key: %w", err)
-    }
+	// Decode the PEM block
+	block, rest := pem.Decode(publicKeyPem)
+	if block == nil || len(rest) > 0 {
+		return nil, errors.New("failed to decode public key PEM")
+	}
 
 
-    // Ensure the public key is of the correct type
-    pubKey, ok := publicKey.(*ecdsa.PublicKey)
-    if !ok {
-        log.Printf("Public key is not of type *ecdsa.PublicKey")
-        return nil, errors.New("public key is not of type *ecdsa.PublicKey")
-    }
+	// Parse the public key
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public key: %w", err)
+	}
 
-    // Parse the token
-    // Parse the token
-    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-            log.Printf("Unexpected signing method: %v", token.Header["alg"])
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-        }
-        return pubKey, nil
-    })
+	// Ensure the public key is of the correct type
+	pubKey, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Printf("Public key is not of type *ecdsa.PublicKey")
+		return nil, errors.New("public key is not of type *ecdsa.PublicKey")
+	}
 
-    if err != nil {
-        log.Printf("Failed to parse token: %v", err)
-        return nil, fmt.Errorf("failed to parse token: %w", err)
-    }
+	// Parse the token
+	// Parse the token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+			log.Printf("Unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return pubKey, nil
+	})
 
-    if !token.Valid {
-        log.Printf("Invalid token")
-        return nil, errors.New("invalid token")
-    }
+	if err != nil {
+		log.Printf("Failed to parse token: %v", err)
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
 
-    return token, nil
+	if !token.Valid {
+		log.Printf("Invalid token")
+		return nil, errors.New("invalid token")
+	}
+
+	return token, nil
 }
 
 // 3. system function
@@ -197,41 +185,32 @@ func HashFile(data string) (string, error) {
 }
 
 func DeleteDirectoryContents(dirPath string) error {
-    // Read the directory
-    entries, err := os.ReadDir(dirPath)
-    if err != nil {
-        if os.IsNotExist(err) {
-            return nil // Directory does not exist, nothing to delete
-        }
-        return err
-    }
+	// Read the directory
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Directory does not exist, nothing to delete
+		}
+		return err
+	}
 
-    // Remove each entry in the directory
-    for _, entry := range entries {
-        entryPath := filepath.Join(dirPath, entry.Name())
-        if entry.IsDir() {
-            // Recursively delete subdirectories
-            err = os.RemoveAll(entryPath)
-            if err != nil {
-                return err
-            }
-        } else {
-            // Delete files
-            err = os.Remove(entryPath)
-            if err != nil {
-                return err
-            }
-        }
-    }
+	// Remove each entry in the directory
+	for _, entry := range entries {
+		entryPath := filepath.Join(dirPath, entry.Name())
+		if entry.IsDir() {
+			// Recursively delete subdirectories
+			err = os.RemoveAll(entryPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Delete files
+			err = os.Remove(entryPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
-    return nil
+	return nil
 }
-
-
-
-
-
-
-
-
-
