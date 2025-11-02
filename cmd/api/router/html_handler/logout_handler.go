@@ -2,7 +2,6 @@ package html_handler
 
 import (
 	"html/template"
-	"log"
 	"net/http"
 	"time"
 
@@ -30,7 +29,6 @@ func (h *HtmlHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, cookie)
 
-	log.Printf("User %s has been logged out", user_id)
 
 	// Load and parse the logout template
 	tmpl, err := template.ParseFiles("web/html/logout.html")
