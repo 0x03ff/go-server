@@ -31,7 +31,5 @@ go.work.sum
 # .idea/
 .vscode/
 
-# python , c,c++
-.py
-.c
-.cpp
+# system log
+*.log

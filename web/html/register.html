@@ -30,7 +30,7 @@
             <label for="confirm_recover">Please input user recover key again: 6-20 Characters</label><br>
             <input type="password" id="confirm_recover" name="confirm_recover" placeholder="Confirm Password"
                 maxlength="20" required>
-
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit">Register</button>
         </form>
 
@@ -41,16 +41,25 @@
 
     <script type="module">
         import { generateECDHKeyPairP384, ECDH_hash256 } from '/assets/js/ECDH_384.js';
+        import { checkCSRFToken } from '/assets/js/utils.js';
+
+        sessionStorage.clear()
+        setTimeout(() => {
+                checkCSRFToken();
+                setInterval(checkCSRFToken, 30 * 1000);
+            }, 100);
         const form = document.getElementById('register-form');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-
+            
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm_password').value;
             const recover = document.getElementById('recover').value;
             const confirmRecover = document.getElementById('confirm_recover').value;
+            const csrfToken = document.getElementById('csrf_token').value;
+
 
             if (username.length < 6 || username.length > 20) {
                 alert('User ID must be between 6 and 20 characters');
@@ -83,8 +92,7 @@
 
 
             try {
-
-
+                
                 // FIXED: Added missing await and variable declarations
                 const hash_recover = await ECDH_hash256(recover);
                 const { publicKey: user_public_key, privateKey: user_encrypt_private_key } =
@@ -97,11 +105,14 @@
                     "ecdh_public_key": btoa(user_public_key),
                     "ecdh_encrypt_private_key":user_encrypt_private_key
                 };
+               
 
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken,
+
                     },
                     body: JSON.stringify(userData)
                 });

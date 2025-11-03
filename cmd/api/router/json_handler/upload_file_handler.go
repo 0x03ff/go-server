@@ -11,11 +11,18 @@ import (
 
 	"github.com/0x03ff/golang/internal/store/models"
 	"github.com/0x03ff/golang/internal/store/repositories"
+	"github.com/0x03ff/golang/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 func (h *JsonHandlers) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
+
+	csrf_err := utils.VerifyCSRFtoken(w , r )
+	if csrf_err != nil{
+		return
+	}
+	
 	user_id := chi.URLParam(r, "user_id")
 
 	// Parse the multipart form

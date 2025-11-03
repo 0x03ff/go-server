@@ -82,6 +82,7 @@ func (app *Application) Mount() http.Handler {
         html_handler.SetupHtmlRoutes(r, app)
 
     }
+	
     return router.SetupRoutes(setupFunc)
 }
 

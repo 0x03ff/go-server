@@ -11,6 +11,13 @@ import (
 )
 
 func (h *JsonHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
+
+	csrf_err := utils.VerifyCSRFtoken(w , r )
+	if csrf_err != nil{
+		utils.SendError(w, http.StatusForbidden, "CSRF_TOKEN_INVALID")
+		return
+	}
+
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {

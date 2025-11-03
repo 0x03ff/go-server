@@ -1,12 +1,14 @@
 package web_server
 
 import (
+	"net/http"
+
 	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/firewall"
 	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/security"
 	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/server"
 	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/tcp"
-	"github.com/jackc/pgx/v5/pgxpool" // Add this import
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool" // Add this import
 )
 
 // WebServerHandlers holds all the handlers for the resilience API
@@ -36,6 +38,9 @@ type App interface {
 func SetupResilienceRoutes(r chi.Router, app App) {
 	handlers := app.GetWebServerHandlers()
 	
+	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+        http.Redirect(w, r, "/assets/image/storage_icon.ico", http.StatusMovedPermanently)
+    })
 	// Web Server Hardening Baseline (Researcher A)
 	r.Route("/api/web_server", func(r chi.Router) {
 		r.Get("/", handlers.Server.WebServerHandler)

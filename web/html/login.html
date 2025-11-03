@@ -12,10 +12,12 @@
 <body>
     <div class="login-container">
         <h2>Online Storage System</h2>
-        
+
         <!-- Error message container -->
-        <div id="error-message" style="display: none; color: red; padding: 10px; background-color: #ffebee; border-radius: 4px; margin-bottom: 15px;"></div>
-        
+        <div id="error-message"
+            style="display: none; color: red; padding: 10px; background-color: #ffebee; border-radius: 4px; margin-bottom: 15px;">
+        </div>
+
         <form id="login-form">
             <p>Please input user ID:</p>
             <input type="text" id="username" name="username" placeholder="User name" required>
@@ -24,6 +26,7 @@
 
             <label for="recover">Please input user recover key</label><br>
             <input type="password" id="recover" name="recover" placeholder="Recover" maxlength="20" required>
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit">Login</button>
 
         </form>
@@ -32,12 +35,18 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { checkCSRFToken } from '/assets/js/utils.js';
+        sessionStorage.clear()
         document.addEventListener('DOMContentLoaded', async function () {
+            setTimeout(() => {
+                checkCSRFToken();
+                setInterval(checkCSRFToken, 30 * 1000);
+            }, 100);
             // Check for error messages in URL
             const urlParams = new URLSearchParams(window.location.search);
             const error = urlParams.get('error');
-            
+
             const errorMessages = {
                 'invalid_url': 'User ID not found in URL path. Please try again.',
                 'missing_token': 'Session expired. Please log in again.',
@@ -46,14 +55,15 @@
                 'invalid_claims': 'Session data corrupted. Please log in again.',
                 'missing_user_id': 'User ID missing from session. Please log in again.',
                 'id_mismatch': 'User ID mismatch. Please log in again.'
+
             };
-            
+
             const errorMessageElement = document.getElementById('error-message');
-            
+
             if (error && errorMessages[error]) {
                 errorMessageElement.textContent = errorMessages[error];
                 errorMessageElement.style.display = 'block';
-                
+
                 // Remove the error parameter from the URL without reloading
                 const newUrl = window.location.pathname;
                 window.history.replaceState(null, null, newUrl);
@@ -69,9 +79,11 @@
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
+            
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                 const recover = document.getElementById('recover').value;
+                const csrfToken = document.getElementById('csrf_token').value;
 
                 if (username.length < 6 || username.length > 20) {
                     alert('User ID must be between 6 and 20 characters');
@@ -98,7 +110,8 @@
                     const response = await fetch('/api/login', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
                         },
                         body: JSON.stringify(userData)
                     });
@@ -106,7 +119,7 @@
                     if (!response.ok) {
                         const errorData = await response.text();
                         console.log('Raw error response:', errorData);
-                        
+
                         // Display error message from server
                         errorMessageElement.textContent = 'Login failed: ' + (errorData || 'Unknown error');
                         errorMessageElement.style.display = 'block';

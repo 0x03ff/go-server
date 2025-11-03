@@ -10,6 +10,11 @@ import (
 )
 
 func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	
+	csrf_err := utils.VerifyCSRFtoken(w , r )
+	if csrf_err != nil{
+		return
+	}
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {

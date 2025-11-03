@@ -27,6 +27,8 @@
                         <label for="file_name">File name: 6-20 Characters:</label>
                         <input type="text" id="file_name" name="filename" placeholder="Enter file name" maxlength="20"
                             required>
+                        <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
+
                     </div>
                     <div class="input-group">
                         <label for="file">Choose File</label>
@@ -44,7 +46,13 @@
 
     <script type="module">
         import { ECDH_encryption } from '/assets/js/ECDH_384.js';
+        import { checkCSRFToken } from '/assets/js/utils.js';
+
         document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                checkCSRFToken();
+                setInterval(checkCSRFToken, 30 * 1000);
+            }, 100);
             const fileInput = document.getElementById('file');
             const fileNameInput = document.getElementById('file_name');
 
@@ -73,6 +81,7 @@
                 const fileName = document.getElementById('file_name').value.trim();
                 const fileInput = document.getElementById('file');
                 const uploadBtn = document.getElementById('upload-btn');
+
 
                 if (fileName.length >= 6 && fileName.length <= 20 && fileInput.files.length > 0) {
                     uploadBtn.disabled = false;
@@ -114,7 +123,7 @@
 
                     const response = await fetch('/api/upload_file/{{.UserID}}', {
                         method: 'POST',
-                        body: formData,
+                        body: formData,  
                     });
 
                     if (!response.ok) {

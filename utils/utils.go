@@ -3,18 +3,22 @@ package utils
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/0x03ff/golang/internal/store"
@@ -91,10 +95,6 @@ func GenerateToken(ctx context.Context, userID uuid.UUID, userName string, syste
 		return "", fmt.Errorf("failed to decode private key PEM")
 	}
 
-	// Debugging: Print the PEM block type and bytes
-	fmt.Printf("PEM Block Type: %s\n", block.Type)
-	fmt.Printf("PEM Block Bytes: %x\n", block.Bytes)
-
 	// Parse the private key
 	privateKey, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
@@ -135,7 +135,6 @@ func VerifyToken(tokenString string, systemRepo store.SystemKeyRepository) (*jwt
 	if block == nil || len(rest) > 0 {
 		return nil, errors.New("failed to decode public key PEM")
 	}
-
 
 	// Parse the public key
 	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
@@ -214,3 +213,80 @@ func DeleteDirectoryContents(dirPath string) error {
 
 	return nil
 }
+
+func GenerateCSRFToken() string {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic("Failed to generate CSRF token: " + err.Error())
+	}
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+func VerifyCSRFtoken(w http.ResponseWriter, r *http.Request) error {
+	// 1. Try to get token from header first (for AJAX requests)
+	csrfToken := r.Header.Get("X-CSRF-Token")
+
+	// 2. If not in header, check form data (for traditional form submissions)
+	if csrfToken == "" {
+		contentType := r.Header.Get("Content-Type")
+		if strings.Contains(contentType, "multipart/form-data") {
+			// Parse multipart form with reasonable size limit
+			if err := r.ParseMultipartForm(10 << 20); err != nil {
+				return fmt.Errorf("failed to parse multipart form: %w", err)
+			}
+			csrfToken = r.FormValue("csrf_token")
+		} else {
+			// For URL-encoded form data
+			if err := r.ParseForm(); err != nil {
+				return fmt.Errorf("failed to parse form: %w", err)
+			}
+			csrfToken = r.FormValue("csrf_token")
+		}
+	}
+
+	// 3. Validate we have a token
+	if csrfToken == "" {
+		SendError(w, http.StatusForbidden, "Missing CSRF token")
+		return errors.New("missing csrf token")
+	}
+
+	// 4. Get token from cookie
+	csrfCookie, err := r.Cookie("csrf_token")
+	if err != nil {
+		SendError(w, http.StatusForbidden, "Invalid CSRF token")
+		return fmt.Errorf("csrf cookie error: %w", err)
+	}
+
+	// 5. Validate token match
+	if csrfCookie.Value != csrfToken {
+		SendError(w, http.StatusForbidden, "Invalid CSRF token")
+		return errors.New("csrf token mismatch")
+	}
+
+	return nil
+}
+
+func SetupLogging() (*log.Logger, *os.File, error) {
+	// Create logs directory if missing
+	if err := os.MkdirAll("logs", 0755); err != nil {
+		return nil, nil, err
+	}
+
+	// Open log file with append mode
+	logFile, err := os.OpenFile("./logs/system.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create multi-writer (terminal + log file)
+	multiWriter := io.MultiWriter(os.Stdout, logFile)
+	
+	// Configure standard logger to use multi-writer
+	log.SetOutput(multiWriter)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile) // Optional: add timestamps and file info
+
+	// Return the standard logger, log file, and nil error
+	return log.Default(), logFile, nil
+}
+

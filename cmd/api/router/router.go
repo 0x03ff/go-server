@@ -32,9 +32,12 @@ func SetupRoutes(setupRoutes SetupRoutesFunc) http.Handler {
 
     r.Mount("/assets/", http.StripPrefix("/assets/", fs))
 
+    
+
     r.Route("/", func(r chi.Router) {
         setupRoutes(r)
     })
+    
 
     return r
 }
