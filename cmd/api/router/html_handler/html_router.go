@@ -29,11 +29,17 @@ func SetupHtmlRoutes(r chi.Router, app App) {
 
 	authMiddleware := router.JWTMiddleware(handlers.dbPool)
 
-    r.With(authMiddleware).Get("/transfer/{user_id}", handlers.TransferHandler)
     r.With(authMiddleware).Get("/home/{user_id}", handlers.HomeHandler)
     r.With(authMiddleware).Get("/file_download/{user_id}", handlers.FileDownloadHandler)
     r.With(authMiddleware).Get("/file_upload/{user_id}", handlers.FileUploadHandler)
+
+	
+	r.With(authMiddleware).Get("/folder_download/{user_id}", handlers.FolderDownloadHandler)
+    r.With(authMiddleware).Get("/folder_upload/{user_id}", handlers.FolderUploadHandler)
+
+
     r.With(authMiddleware).Get("/logout/{user_id}", handlers.LogoutHandler)
+	
 
 
 }

@@ -27,17 +27,17 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = utils.ValidateInput("User ID", user.Username, 6, 20)
+	err = utils.ValidateUserInput("User ID", user.Username, 6, 20)
 	if err != nil {
 		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	err = utils.ValidateInput("Password", user.Password, 8, 20)
+	err = utils.ValidateUserInput("Password", user.Password, 8, 20)
 	if err != nil {
 		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
 	}	
-	err = utils.ValidateInput("Recover key", user.Recover, 6, 20)
+	err = utils.ValidateUserInput("Recover key", user.Recover, 6, 20)
 	if err != nil {
 		utils.SendError(w, http.StatusBadRequest, err.Error())
 		return
@@ -48,7 +48,7 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	err = userRepo.Create(r.Context(), &user)
 
 	if err != nil {
-		utils.SendError(w, http.StatusInternalServerError, string(err.Error()))
+		utils.SendError(w, http.StatusInternalServerError, "Registration failed. Please try again.")
 		return
 	}
 

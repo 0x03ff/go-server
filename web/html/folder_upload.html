@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload file</title>
+    <link href="/assets/css/remain_page.css" rel="stylesheet" type="text/css">
+    <link rel="icon" href="/assets/image/storage_icon.ico">
+</head>
+
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <a href="/home/{{.UserID}}">Home</a><br>
+            <a href="/file_upload/{{.UserID}}" >Upload file</a><br>
+            <a href="/file_download/{{.UserID}}?index=0">Download file</a><br>
+            <a href="/folder_upload/{{.UserID}}"class="active">Upload folder</a><br>
+            <a href="/folder_download/{{.UserID}}">Download folder</a><br>
+            <a href="/logout/{{.UserID}}">Logout</a><br>
+        </div>
+        <div class="main-content">
+            <h1>Online Storage System</h1>
+            <div class="card">
+                <h3>Upload folder</h3>
+                <form id="upload-form">
+                    <input type="hidden" name="user_id" value="{{.UserID}}">
+                    <div class="input-group">
+                        <label for="file_name">Folder name: 6-20 Characters:</label>
+                        <input type="text" id="file_name" name="filename" placeholder="Enter file name" maxlength="20"
+                            required>
+                        <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
+
+                    </div>
+                    <div class="input-group">
+                        <label for="file">Choose Folder</label>
+                        <input type="file" id="folder" name="folder" required  webkitdirectory directory>
+
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" id="upload-btn" disabled>Upload file</button>
+                    </div>
+                </form>
+                <div id="response-message"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        setTimeout(() => {
+                checkCSRFToken();
+                setInterval(checkCSRFToken, 30 * 1000);
+            }, 100);
+    </script>
+</body>
+</html>

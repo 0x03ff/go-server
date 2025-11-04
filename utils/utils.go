@@ -51,6 +51,18 @@ func SendError(w http.ResponseWriter, code int, message string) {
 
 }
 
+func SendJSONError(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error":   message,
+		"code":    code,
+		"details": message,
+	})
+}
+
+
+
 func SanitizeHTML(input string) string {
 	// Sanitize the input using bluemonday
 	policy := bluemonday.UGCPolicy()
@@ -58,17 +70,12 @@ func SanitizeHTML(input string) string {
 	return clean
 }
 
-func ValidateInput(description string, data string, lower_limit int, upper_limit int) error {
+func ValidateUserInput(description string, data string, lower_limit int, upper_limit int) error {
 
 	// Sanitize the input to prevent XSS
 	sanitizedData := SanitizeHTML(data)
 
-	// Check if the sanitized data is different from the original data
-	if sanitizedData != data {
-		return errors.New("invalid input detected")
-	}
-
-	if len(data) < lower_limit || len(data) > upper_limit {
+	if len(sanitizedData) < lower_limit || len(sanitizedData) > upper_limit {
 		temp := description + " must be between " + strconv.Itoa(lower_limit) + " and " + strconv.Itoa(upper_limit) + " characters"
 		return errors.New(temp)
 	}
@@ -281,7 +288,7 @@ func SetupLogging() (*log.Logger, *os.File, error) {
 
 	// Create multi-writer (terminal + log file)
 	multiWriter := io.MultiWriter(os.Stdout, logFile)
-	
+
 	// Configure standard logger to use multi-writer
 	log.SetOutput(multiWriter)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile) // Optional: add timestamps and file info
