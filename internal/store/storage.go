@@ -32,11 +32,18 @@ type FileRepository interface {
 	 GetFileById(ctx context.Context, file *models.File, id int) error
 }
 
+type FolderRepository interface {
+	 Upload(ctx context.Context, folder *models.Folder) (err error)
+	 Search(ctx context.Context, userID uuid.UUID, index int) ([]*models.Folder, error) 
+	 GetFolderById(ctx context.Context, folder *models.Folder, id int) error
+}
+
 type Storage struct {
 	
 	Users UsersRepository
 	System SystemKeyRepository
 	Files FileRepository
+	Folders FolderRepository
 } 
 
 func NewStorage(db *pgxpool.Pool) Storage{
@@ -45,5 +52,6 @@ func NewStorage(db *pgxpool.Pool) Storage{
 		Users: repositories.NewUsersRepository(db),
 		System: repositories.NewKeysRepository(db),
 		Files : repositories.NewFilesRepository(db),
+		Folders : repositories.NewFoldersRepository(db),
 	}
 }

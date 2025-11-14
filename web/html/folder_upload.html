@@ -27,30 +27,101 @@
                     <input type="hidden" name="user_id" value="{{.UserID}}">
                     <div class="input-group">
                         <label for="file_name">Folder name: 6-20 Characters:</label>
-                        <input type="text" id="file_name" name="filename" placeholder="Enter file name" maxlength="20"
+                        <input type="text" id="file_name" name="filename" placeholder="Enter folder name" maxlength="20"
                             required>
                         <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
 
                     </div>
                     <div class="input-group">
-                        <label for="file">Choose Folder</label>
+                        <label for="folder">Choose Folder</label>
                         <input type="file" id="folder" name="folder" required  webkitdirectory directory>
 
                     </div>
 
+                    <div class="input-group">
+                        <label for="key_type">Encryption Key Type:</label>
+                        <select id="key_type" name="key_type" class="form-select">
+                            <option value="non-encrypted">Non-encrypted</option>
+                            <option value="aes">AES</option>
+                            <option value="rsa-2048">RSA-2048</option>
+                            <option value="rsa-4096">RSA-4096</option>
+                        </select>
+                    </div>
+
                     <div class="button-group">
-                        <button type="submit" id="upload-btn" disabled>Upload file</button>
+                        <button type="submit" id="upload-btn" disabled>Upload folder</button>
                     </div>
                 </form>
                 <div id="response-message"></div>
             </div>
         </div>
     </div>
-    <script>
-        setTimeout(() => {
+    <script type="module">
+        import { checkCSRFToken } from '/assets/js/utils.js';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
                 checkCSRFToken();
                 setInterval(checkCSRFToken, 30 * 1000);
             }, 100);
+
+            const folderInput = document.getElementById('folder');
+            const folderNameInput = document.getElementById('file_name');
+
+            document.getElementById('file_name').addEventListener('input', checkInputs);
+            document.getElementById('folder').addEventListener('change', checkInputs);
+            document.getElementById('upload-form').addEventListener('submit', handleFolderUpload);
+
+            function checkInputs() {
+                const folderName = document.getElementById('file_name').value.trim();
+                const folderInput = document.getElementById('folder');
+                const uploadBtn = document.getElementById('upload-btn');
+
+                if (folderName.length >= 6 && folderName.length <= 20 && folderInput.files.length > 0) {
+                    uploadBtn.disabled = false;
+                } else {
+                    uploadBtn.disabled = true;
+                }
+            }
+
+            async function handleFolderUpload(event) {
+                event.preventDefault();
+
+                const formData = new FormData(document.getElementById('upload-form'));
+                const keyType = document.getElementById('key_type').value;
+                const folderName = folderNameInput.value.trim();
+
+                try {
+                    // Get all files from folder
+                    const files = document.getElementById('folder').files;
+                    
+                    if (files.length === 0) {
+                        throw new Error("No files selected");
+                    }
+
+                    // Add encryption type to form data
+                    formData.append('encrypt_method', keyType);
+                    formData.append('folder_name', folderName);
+
+                    const response = await fetch('/api/upload_folder/{{.UserID}}', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        const errorMessage = await response.text();
+                        throw new Error(errorMessage);
+                    }
+
+                    const data = await response.json();
+                    alert(data.message);
+                    window.location.href = '/home/{{.UserID}}';
+                } catch (error) {
+                    alert('Error uploading folder: ' + error);
+                    window.location.href = '/home/{{.UserID}}';
+                }
+            }
+        });
     </script>
 </body>
 </html>
