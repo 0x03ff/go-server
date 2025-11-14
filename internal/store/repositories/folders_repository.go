@@ -37,8 +37,8 @@ func (r *foldersRepository) Upload(ctx context.Context, folder *models.Folder) e
 
     // Prepare the SQL query with all columns
     query := `
-        INSERT INTO folders (title, user_id, file_path, secret, encrypt, extension)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO folders (title, user_id, file_path, secret, private_key, encrypt, extension)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, created_at;
     `
 
@@ -48,6 +48,7 @@ func (r *foldersRepository) Upload(ctx context.Context, folder *models.Folder) e
         folder.UserID, 
         folder.FilePath,
         folder.Secret,
+        folder.PrivateKey,
         folder.Encrypt,
         folder.Extension).
         Scan(&folder.ID, &folder.CreatedAt)
@@ -109,7 +110,7 @@ func (r *foldersRepository) Search(ctx context.Context, userID uuid.UUID, index 
 
 func (r *foldersRepository) GetFolderById(ctx context.Context, folder *models.Folder, id int) error {
     query := `
-        SELECT id, title, user_id, file_path, secret, encrypt, extension, created_at
+        SELECT id, title, user_id, file_path, secret, private_key, encrypt, extension, created_at
         FROM folders
         WHERE id = $1;
     `
@@ -120,6 +121,7 @@ func (r *foldersRepository) GetFolderById(ctx context.Context, folder *models.Fo
         &folder.UserID,
         &folder.FilePath,
         &folder.Secret,
+        &folder.PrivateKey,
         &folder.Encrypt,
         &folder.Extension,
         &folder.CreatedAt,

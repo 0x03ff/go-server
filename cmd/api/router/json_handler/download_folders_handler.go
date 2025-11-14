@@ -121,10 +121,30 @@ func (h *JsonHandlers) DownloadFolderHandler(w http.ResponseWriter, r *http.Requ
 
         case "rsa-2048", "rsa-4096":
             // For RSA: folder.Secret contains the RSA-encrypted AES key
-            // We need the RSA private key to decrypt it
-            // For now, we'll return an error as we don't have RSA decryption implemented
-            http.Error(w, "RSA decryption not yet implemented (key management required)", http.StatusNotImplemented)
-            return
+            // folder.PrivateKey contains the RSA private key (PEM format)
+            if len(folder.Secret) == 0 || len(folder.PrivateKey) == 0 {
+                http.Error(w, "Encryption keys not found", http.StatusInternalServerError)
+                return
+            }
+            
+            fmt.Printf("[DOWNLOAD] RSA encrypted AES key size: %d bytes\n", len(folder.Secret))
+            fmt.Printf("[DOWNLOAD] RSA private key size: %d bytes\n", len(folder.PrivateKey))
+            
+            // Step 1: Decrypt the AES key using RSA private key
+            aesKey, err := repositories.DecryptRSA(folder.Secret, folder.PrivateKey)
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Failed to decrypt AES key with RSA: %v", err), http.StatusInternalServerError)
+                return
+            }
+            fmt.Printf("[DOWNLOAD] Decrypted AES key size: %d bytes\n", len(aesKey))
+            
+            // Step 2: Decrypt the actual data using the AES key
+            finalData, err = repositories.DecryptAESGCM(encryptedData, aesKey)
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Failed to decrypt data with AES: %v", err), http.StatusInternalServerError)
+                return
+            }
+            fmt.Printf("[DOWNLOAD] RSA+AES decryption successful, size: %d bytes\n", len(finalData))
 
         default:
             http.Error(w, "Unknown encryption method", http.StatusBadRequest)

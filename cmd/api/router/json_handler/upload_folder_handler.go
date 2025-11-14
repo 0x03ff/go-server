@@ -140,6 +140,7 @@ func (h *JsonHandlers) UploadFolderHandler(w http.ResponseWriter, r *http.Reques
 	// Encrypt the zip file based on encryption method
 	var encryptedData []byte
 	var aesKey []byte
+	var rsaPrivateKey []byte // Store RSA private key if using RSA encryption
 
 	fmt.Printf("[ENCRYPTION] Method: %s, Original ZIP size: %d bytes\n", encryptMethod, len(zipData))
 
@@ -193,7 +194,7 @@ func (h *JsonHandlers) UploadFolderHandler(w http.ResponseWriter, r *http.Reques
 		fmt.Printf("[ENCRYPTION] Using RSA-%d for key encryption\n", keySize)
 
 		// Generate RSA key pair
-		rsaPublicKeyPEM, _, err := repositories.GenerateRSAKeyPair(keySize)
+		rsaPublicKeyPEM, rsaPrivateKeyPEM, err := repositories.GenerateRSAKeyPair(keySize)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error generating RSA key: %v", err), http.StatusInternalServerError)
 			return
@@ -222,8 +223,9 @@ func (h *JsonHandlers) UploadFolderHandler(w http.ResponseWriter, r *http.Reques
 		}
 		fmt.Printf("[ENCRYPTION] RSA encrypted AES key size: %d bytes\n", len(encryptedAESKey))
 
-		// Store encrypted AES key
+		// Store encrypted AES key and RSA private key for later decryption
 		aesKey = encryptedAESKey
+		rsaPrivateKey = rsaPrivateKeyPEM
 	}
 
 	fmt.Printf("[ENCRYPTION] Final encrypted data size: %d bytes, Method: %s\n", len(encryptedData), encryptMethod)
@@ -267,12 +269,13 @@ func (h *JsonHandlers) UploadFolderHandler(w http.ResponseWriter, r *http.Reques
 
 	// Construct the models.Folder struct
 	folderModel := &models.Folder{
-		Title:     folderName,
-		UserID:    uuid.MustParse(user_id),
-		FilePath:  cleanPath,
-		Secret:    aesKey, // Store AES key (or encrypted AES key for RSA)
-		Encrypt:   encryptMethod,
-		Extension: "zip",
+		Title:      folderName,
+		UserID:     uuid.MustParse(user_id),
+		FilePath:   cleanPath,
+		Secret:     aesKey,        // Store AES key (or encrypted AES key for RSA)
+		PrivateKey: rsaPrivateKey, // Store RSA private key (only for RSA encryption)
+		Encrypt:    encryptMethod,
+		Extension:  "zip",
 	}
 
 	// Store the folder information in the database

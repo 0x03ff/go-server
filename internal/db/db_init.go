@@ -93,6 +93,7 @@ func db_init(dropFlag bool, pool *pgxpool.Pool) error {
 			user_id UUID NOT NULL,
 			file_path VARCHAR(255) NOT NULL,
 			secret BYTEA,
+			private_key BYTEA,
 			encrypt VARCHAR(50) NOT NULL DEFAULT 'non-encrypted',
 			extension VARCHAR(10) NOT NULL DEFAULT 'bin',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

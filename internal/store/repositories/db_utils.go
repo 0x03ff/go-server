@@ -220,4 +220,27 @@ func GenerateAESKey() ([]byte, error) {
 	return key, nil
 }
 
+// DecryptRSA decrypts data using RSA private key
+func DecryptRSA(encryptedData []byte, privateKeyPEM []byte) ([]byte, error) {
+	// Parse the PEM encoded private key
+	block, _ := pem.Decode(privateKeyPEM)
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing private key")
+	}
+
+	// Parse the RSA private key
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse RSA private key: %w", err)
+	}
+
+	// Decrypt using RSA
+	decryptedData, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, encryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt with RSA: %w", err)
+	}
+
+	return decryptedData, nil
+}
+
 
