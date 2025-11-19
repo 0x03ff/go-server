@@ -50,6 +50,9 @@ func main() {
 	// set drop_flag to drop the database:
 	drop_flag := true
 
+	// set Random_request_address to product different ip-addr:
+
+	random_request_address := true
 	if drop_flag {
 		// Delete all folders and their contents under /assets/users/
 		err = utils.DeleteDirectoryContents("assets/users")
@@ -79,7 +82,7 @@ func main() {
 		Cert_path:    "internal/certs/go_cert.pem",
 		Key_path:     "internal/certs/go_key.pem",
 		HtmlHandlers: html_handler.NewHandlers(PDPool),
-		JsonHandlers: json_handler.NewHandlers(PDPool),
+		JsonHandlers: json_handler.NewHandlers(PDPool,random_request_address),
 	}
 
 	mux := app.Mount()

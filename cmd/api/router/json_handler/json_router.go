@@ -14,26 +14,29 @@ import (
 type JsonHandlers struct {
 	dbPool    *pgxpool.Pool
 	WebServer *web_server.WebServerHandlers
+
+
+	// Rate limiting and brute-force protection fields 
+	random_address bool
+	mu                      sync.Mutex
+	failedAttempts          map[string]int       // Tracks failed attempts per client
+	lockoutTimes            map[string]time.Time // Tracks lockout expiration times
+	lastLoginTimes          map[string]time.Time // Tracks last login attempt times
+	successfulRegistrations map[string]int
 	
-	// ====== NEW: Rate limiting and brute-force protection fields ======
-	mu              sync.Mutex
-	failedAttempts  map[string]int       // Tracks failed attempts per client
-	lockoutTimes    map[string]time.Time // Tracks lockout expiration times
-	lastLoginTimes  map[string]time.Time // Tracks last login attempt times
-	// ====== END OF NEW FIELDS ======
 }
 
 
 // NewHandlers creates and returns all JSON handlers
-func NewHandlers(dbPool *pgxpool.Pool) *JsonHandlers {
+func NewHandlers(dbPool *pgxpool.Pool, random_flag bool ) *JsonHandlers {
 	return &JsonHandlers{
 		dbPool:    dbPool,
 		WebServer: web_server.NewWebServerHandlers(dbPool),
-		
-		failedAttempts: make(map[string]int),
-		lockoutTimes:   make(map[string]time.Time),
-		lastLoginTimes: make(map[string]time.Time),
-		
+		random_address : random_flag ,
+		failedAttempts:          make(map[string]int),
+		lockoutTimes:            make(map[string]time.Time),
+		lastLoginTimes:          make(map[string]time.Time),
+		successfulRegistrations: make(map[string]int),
 	}
 }
 
@@ -71,10 +74,13 @@ func SetupJsonRoutes(r chi.Router, app App) {
 	// handle folder
 	r.With(authMiddleware).Post("/api/upload_folder/{user_id}", handlers.UploadFolderHandler)
 	r.With(authMiddleware).Get("/api/download_folder/{user_id}/{file_id}", handlers.DownloadFolderHandler)
+<<<<<<< HEAD
 	
 
 
 
 
+=======
+>>>>>>> da9c5bd (implement pprof server with port 8086, rate limit)
 
 }

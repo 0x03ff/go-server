@@ -13,9 +13,9 @@
     <div class="container">
         <div class="sidebar">
             <a href="/home/{{.UserID}}">Home</a><br>
-            <a href="/file_upload/{{.UserID}}" >Upload file</a><br>
+            <a href="/file_upload/{{.UserID}}">Upload file</a><br>
             <a href="/file_download/{{.UserID}}?index=0">Download file</a><br>
-            <a href="/folder_upload/{{.UserID}}"class="active">Upload folder</a><br>
+            <a href="/folder_upload/{{.UserID}}" class="active">Upload folder</a><br>
             <a href="/folder_download/{{.UserID}}">Download folder</a><br>
             <a href="/logout/{{.UserID}}">Logout</a><br>
         </div>
@@ -34,9 +34,23 @@
                     </div>
                     <div class="input-group">
                         <label for="file">Choose Folder</label>
+<<<<<<< HEAD
                         <input type="file" id="folder" name="folder" required  webkitdirectory directory>
 
                     </div>
+=======
+                        <input type="file" id="folder" name="folder" required webkitdirectory directory>
+
+                    </div>
+                    <div class="input-group">
+                        <label for="key_type">Encryption Key Type:</label>
+                        <select id="key_type" name="key_type" class="form-select">
+                            <option value="ecdh-256" selected>ecdh-256 (Default)</option>
+                            <option value="rsa2048">rsa2048</option>
+                            <option value="rsa4096">rsa4096</option>
+                        </select>
+                    </div>
+>>>>>>> da9c5bd (implement pprof server with port 8086, rate limit)
 
                     <div class="button-group">
                         <button type="submit" id="upload-btn" disabled>Upload file</button>
@@ -48,9 +62,18 @@
     </div>
     <script>
         setTimeout(() => {
+<<<<<<< HEAD
                 checkCSRFToken();
                 setInterval(checkCSRFToken, 30 * 1000);
             }, 100);
     </script>
 </body>
+=======
+            checkCSRFToken();
+            setInterval(checkCSRFToken, 30 * 1000);
+        }, 100);
+    </script>
+</body>
+
+>>>>>>> da9c5bd (implement pprof server with port 8086, rate limit)
 </html>
