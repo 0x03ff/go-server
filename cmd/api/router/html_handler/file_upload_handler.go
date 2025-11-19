@@ -60,7 +60,7 @@ func (h *HtmlHandlers) FileUploadHandler(w http.ResponseWriter, r *http.Request)
 		Name:     "csrf_token",
 		Value:    csrfToken,
 		Path:     "/",
-		Secure:   true,  // Must be true in production
+		Secure:   r.TLS != nil,  // Must be true in production
 		HttpOnly: false, // Needed for JavaScript access
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   300,   // 5 minutes validity

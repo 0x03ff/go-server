@@ -22,7 +22,7 @@ func (h *HtmlHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    "",
 		Path:     "/",
-		HttpOnly: true,
+		HttpOnly: r.TLS != nil,
 		Secure:   r.TLS != nil, // Set to true if using HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Unix(0, 0), // Set the expiration date to a time in the past

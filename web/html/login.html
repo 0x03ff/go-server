@@ -1,156 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
-    <link href="/assets/css/login.css" rel="stylesheet" type="text/css">
+    <title>Login - Online Storage System</title>
+    <link href="/assets/css/login.css" rel="stylesheet">
     <link rel="icon" href="/assets/image/storage_icon.ico">
 </head>
-
 <body>
     <div class="login-container">
         <h2>Online Storage System</h2>
-
-        <!-- Error message container -->
-        <div id="error-message"
-            style="display: none; color: red; padding: 10px; background-color: #ffebee; border-radius: 4px; margin-bottom: 15px;">
-        </div>
-
+        
+        <div id="error-message" class="error" style="display:none;"></div>
+        
         <form id="login-form">
-            <p>Please input user ID:</p>
-            <input type="text" id="username" name="username" placeholder="User name" required>
-            <p>Please input user password:</p>
-            <input type="password" id="password" placeholder="Password" required>
-
-            <label for="recover">Please input user recover key</label><br>
-            <input type="password" id="recover" name="recover" placeholder="Recover" maxlength="20" required>
+            <div class="form-group">
+                <label for="username">User ID</label>
+                <input type="text" id="username" name="username" placeholder="6-20 characters" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="8-20 characters" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="recover">Recovery Key</label>
+                <input type="password" id="recover" placeholder="6-20 characters" maxlength="20" required>
+            </div>
+            
             <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRFToken}}">
             <button type="submit">Login</button>
-
         </form>
+        
         <div class="link">
-            <a href="/register">Do not have an account? Sign up</a>
+            <a href="/register">Don't have an account? Sign up</a>
         </div>
     </div>
 
-    <script type="module">
+      <script type="module">
         import { checkCSRFToken } from '/assets/js/utils.js';
-        sessionStorage.clear()
-        document.addEventListener('DOMContentLoaded', async function () {
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('login-form');
+            const errorMessage = document.getElementById('error-message');
             setTimeout(() => {
                 checkCSRFToken();
                 setInterval(checkCSRFToken, 30 * 1000);
             }, 100);
-            // Check for error messages in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const error = urlParams.get('error');
-
-            const errorMessages = {
-                'invalid_url': 'User ID not found in URL path. Please try again.',
-                'missing_token': 'Session expired. Please log in again.',
-                'empty_token': 'Invalid session. Please log in again.',
-                'invalid_token': 'Invalid session token. Please log in again.',
-                'invalid_claims': 'Session data corrupted. Please log in again.',
-                'missing_user_id': 'User ID missing from session. Please log in again.',
-                'id_mismatch': 'User ID mismatch. Please log in again.'
-
-            };
-
-            const errorMessageElement = document.getElementById('error-message');
-
-            if (error && errorMessages[error]) {
-                errorMessageElement.textContent = errorMessages[error];
-                errorMessageElement.style.display = 'block';
-
-                // Remove the error parameter from the URL without reloading
-                const newUrl = window.location.pathname;
-                window.history.replaceState(null, null, newUrl);
-            }
-
-            const form = document.getElementById('login-form');
-
-            if (!form) {
-                console.error('Login form not found!');
-                return;
-            }
-
+            // Clear session storage on page load
+            sessionStorage.clear();
+            
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-
-            
+                
+                // Basic client-side validation
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                 const recover = document.getElementById('recover').value;
-                const csrfToken = document.getElementById('csrf_token').value;
-
-                if (username.length < 6 || username.length > 20) {
-                    alert('User ID must be between 6 and 20 characters');
-                    return;
-                }
-
-                if (password.length < 8 || password.length > 20) {
-                    alert('Password must be between 8 and 20 characters');
-                    return;
-                }
-
-                if (recover.length < 6 || recover.length > 20) {
-                    alert('Recovery key must be between 6 and 20 characters');
-                    return;
-                }
-
+                
+                if (!validateForm(username, password, recover)) return;
+                
                 const userData = {
-                    "username": username,
-                    "password": password,
-                    "recover": recover
+                    username,
+                    password,
+                    recover
                 };
-
+                
                 try {
                     const response = await fetch('/api/login', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-Token': csrfToken,
+                            'X-CSRF-Token': document.getElementById('csrf_token').value
                         },
                         body: JSON.stringify(userData)
                     });
-
+                    
                     if (!response.ok) {
-                        const errorData = await response.text();
-                        console.log('Raw error response:', errorData);
-
-                        // Display error message from server
-                        errorMessageElement.textContent = 'Login failed: ' + (errorData || 'Unknown error');
-                        errorMessageElement.style.display = 'block';
+                        const errorData = await response.json();
+                        showError(errorData.error || 'Login failed. Please try again.');
                         return;
                     }
-
+                    
                     const data = await response.json();
-                    console.log('Parsed response:', data);
-
-                    const user_id = data.user_id;
-                    const encrypted_private_key = data.client_private;
-                    const server_public_key = data.server_public;
-
-                    // Store keys in sessionStorage (safe to store encrypted data)
-                    sessionStorage.setItem('encrypted_private_key', encrypted_private_key);
-                    sessionStorage.setItem('server_public_key', server_public_key);
-                    sessionStorage.setItem('user_recover', recover);
-
-                    // Redirect to original page if available
-                    const redirect = urlParams.get('redirect') || `/home/${user_id}`;
-                    window.location.href = redirect;
-
+                    storeUserData(data);
+                    redirectToHome(data.user_id);
+                    
                 } catch (error) {
-                    console.error('An error occurred:', error);
-                    errorMessageElement.textContent = 'An error occurred: ' + error.message;
-                    errorMessageElement.style.display = 'block';
+                    showError('Network error. Please check your connection and try again.');
                 }
             });
+            
+            // Helper functions
+            function validateForm(username, password, recover) {
+                if (username.length < 6 || username.length > 20) {
+                    showError('User ID must be 6-20 characters');
+                    return false;
+                }
+                if (password.length < 8 || password.length > 20) {
+                    showError('Password must be 8-20 characters');
+                    return false;
+                }
+                if (recover.length < 6 || recover.length > 20) {
+                    showError('Recovery key must be 6-20 characters');
+                    return false;
+                }
+                return true;
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                errorMessage.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            function storeUserData(data) {
+                sessionStorage.setItem('encrypted_private_key', data.client_private);
+                sessionStorage.setItem('server_public_key', data.server_public);
+                sessionStorage.setItem('user_recover', document.getElementById('recover').value);
+            }
+            
+            function redirectToHome(userId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirect = urlParams.get('redirect') || `/home/${userId}`;
+                window.location.href = redirect;
+            }
         });
     </script>
-
 </body>
-
 </html>

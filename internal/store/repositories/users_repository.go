@@ -3,6 +3,7 @@ package repositories
 
 import (
 	"context"
+
 	"fmt"
 
 
@@ -49,7 +50,7 @@ func (r *usersRepository) Create(ctx context.Context, user *models.User) error {
 	if err != nil {
 		return fmt.Errorf("failed to hash Recover token")
 	}
-
+	
 
 	user.Recover = hashedRecover
 

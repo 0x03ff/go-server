@@ -18,12 +18,18 @@ import (
 
 func (h *JsonHandlers) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
-	csrf_err := utils.VerifyCSRFtoken(w , r )
-	if csrf_err != nil{
+	csrf_err := utils.VerifyCSRFtoken(w, r)
+	if csrf_err != nil {
 		return
 	}
-	
+
 	user_id := chi.URLParam(r, "user_id")
+
+	// Validate UUID
+	if _, err := uuid.Parse(user_id); err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 
 	// Parse the multipart form
 	err := r.ParseMultipartForm(10 << 20) // 10 MB max file size
@@ -41,20 +47,17 @@ func (h *JsonHandlers) UploadFileHandler(w http.ResponseWriter, r *http.Request)
 	defer file.Close()
 
 	// Get user-provided filename (without extension)
-	userFilename := r.FormValue("filename")
+	userFilename := filepath.Base(r.FormValue("filename"))
 	if userFilename == "" {
-		// Fallback to original filename without extension
-		userFilename = strings.TrimSuffix(handler.Filename, filepath.Ext(handler.Filename))
+		// filename not vaild
+		http.Error(w, "Invalid filename", http.StatusBadRequest)
+		return
 	}
 
-	// Get the file extension from form data (critical fix)
-	extension := r.FormValue("extension")
-	if extension == "" {
-		// Fallback to extracting from handler.Filename
-		extension = strings.TrimPrefix(filepath.Ext(handler.Filename), ".")
-		if extension == "" {
-			extension = "bin" // Default to binary
-		}
+	err = utils.ValidateUserInput("file name", r.FormValue("filename"), 6, 20)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Validate the filename length (6-20 characters for the base name)
@@ -63,11 +66,28 @@ func (h *JsonHandlers) UploadFileHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Get the file extension from form data (critical fix)
+	extension := filepath.Base(r.FormValue("extension"))
+	if extension == "" {
+		// Fallback to extracting from handler.Filename
+		extension = strings.TrimPrefix(filepath.Ext(handler.Filename), ".")
+		if extension == "" {
+			http.Error(w, "Invalid filename", http.StatusBadRequest)
+			return
+		}
+	}
+
+	err = utils.ValidateUserInput("file extension", r.FormValue("extension"), 2, 10)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Combine user filename with extension for storage
 	filename := userFilename + "." + extension
 
 	// Define the directory path
-	dirPath := filepath.Join("assets", "users", user_id)
+	dirPath := filepath.Join("assets", "users", user_id, "file")
 	// Create the directory if it doesn't exist
 	err = os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
@@ -76,11 +96,34 @@ func (h *JsonHandlers) UploadFileHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Define the file path
-	filePath := filepath.Join(dirPath, filename)
+	user_file_path := filepath.Join(dirPath, filename)
+
+	// Clean the path to resolve traversal sequences
+	cleanPath := filepath.Clean(user_file_path)
+
+	// 1. Must start with the target directory
+	if !strings.HasPrefix(cleanPath, dirPath) {
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	// 2. Must not be the directory itself
+	if cleanPath == dirPath {
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Verify path separator after directory
+	if len(cleanPath) > len(dirPath) && cleanPath[len(dirPath)] != os.PathSeparator {
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	filePath := cleanPath
 
 	// Construct the models.File struct from form data
 	fileModel := &models.File{
-		Title:     filename,  // Full name with extension
+		Title:     filename, // Full name with extension
 		UserID:    uuid.MustParse(user_id),
 		FilePath:  filePath,
 		Extension: extension, // CRITICAL: Set the extension field

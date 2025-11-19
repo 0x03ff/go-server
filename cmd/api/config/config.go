@@ -11,6 +11,7 @@ import (
 	"github.com/0x03ff/golang/cmd/api/router/json_handler"
 	"github.com/0x03ff/golang/internal/store"
 	"github.com/go-chi/chi/v5"
+
 )
 
 //for dependencies
@@ -87,17 +88,22 @@ func (app *Application) Mount() http.Handler {
 }
 
 func (app *Application) Run(mux http.Handler) error {
+    // 1. Start pprof HTTP server (port 8086) in background
+    go func() {
+        log.Printf("pprof server started on :8086")
+        http.ListenAndServe("0.0.0.0:8086", nil)
+    }()
+
+    // 2. Configure and start main HTTPS server
     srv := &http.Server{
         Addr:         app.Sysconfig.ADDR,
         Handler:      mux,
-        WriteTimeout: time.Second * 30,
-        ReadTimeout:  time.Second * 10,
-        IdleTimeout:  time.Minute,
+        WriteTimeout: 10 * time.Second,
+        ReadTimeout:  60 * time.Second,
+        IdleTimeout:  30 * time.Second,
         TLSConfig:    app.Tlsconfig,
     }
 
-    log.Printf("Server has started at %s",
-        app.Sysconfig.ADDR)
-
+    log.Printf("Main server started at %s", app.Sysconfig.ADDR)
     return srv.ListenAndServeTLS(app.Cert_path, app.Key_path)
 }

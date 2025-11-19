@@ -17,7 +17,7 @@ func (h *HtmlHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    "",
 		Path:     "/",
-		HttpOnly: true,
+		HttpOnly: r.TLS != nil,
 		Secure:   r.TLS != nil, // Set to true if using HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Unix(0, 0), // Set the expiration date to a time in the past
@@ -31,7 +31,7 @@ func (h *HtmlHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name:     "csrf_token",
 		Value:    csrfToken,
 		Path:     "/",
-		Secure:   true,  // Must be true in production
+		Secure:   r.TLS != nil,  // Must be true in production
 		HttpOnly: false, // Needed for JavaScript access
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   300,   // 5 minutes validity
