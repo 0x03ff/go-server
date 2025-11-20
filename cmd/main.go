@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"os"
 
 	_ "net/http/pprof" // Import this for pprof endpoints
 
@@ -24,21 +25,36 @@ func main() {
         }
         defer logFile.Close()
 	// ALL subsequent logs go to BOTH terminal and logs/system.log
-	log.Print("Logging initialized successfully\n\n") 
-	//TLS config
-	tlsCfg := &config.TlsConfig{
-		CertFile:   "internal/certs/go_cert.pem",
-		KeyFile:    "internal/certs/go_key.pem",
-		MinVersion: tls.VersionTLS12,
-	}
+	log.Print("Logging initialized successfully\n\n")
+	
+	// Check if HTTPS should be used (default: true)
+	useHTTPS := os.Getenv("USE_HTTPS") != "false"
+	
+	var tls_config *tls.Config
+	var addr string
+	
+	if useHTTPS {
+		log.Println("Starting in HTTPS mode (port 443)")
+		addr = "0.0.0.0:443"
+		//TLS config
+		tlsCfg := &config.TlsConfig{
+			CertFile:   "internal/certs/go_cert.pem",
+			KeyFile:    "internal/certs/go_key.pem",
+			MinVersion: tls.VersionTLS12,
+		}
 
-	tls_config, err := tlsCfg.NewTLSConfig()
-	if err != nil {
-		log.Fatal(err)
+		tls_config, err = tlsCfg.NewTLSConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Println("Starting in HTTP mode (port 80)")
+		addr = "0.0.0.0:80"
+		tls_config = nil
 	}
 
 	cfg := config.Config{
-		ADDR: "0.0.0.0:443",
+		ADDR: addr,
 		DB: config.DBConfig{
 			DB_addr:      "postgres://comp4334:secret@localhost:5432/go_server?sslmode=disable",
 			MaxOpenConns: 25,
@@ -80,6 +96,7 @@ func main() {
 		Key_path:     "internal/certs/go_key.pem",
 		HtmlHandlers: html_handler.NewHandlers(PDPool),
 		JsonHandlers: json_handler.NewHandlers(PDPool),
+		UseHTTPS:     useHTTPS,
 	}
 
 	mux := app.Mount()

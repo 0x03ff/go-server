@@ -6,6 +6,7 @@ import (
     "github.com/go-chi/chi/v5/middleware"
     "log"
     "net/http"
+    "net/http/pprof"
     "time"
 )
 
@@ -32,7 +33,12 @@ func SetupRoutes(setupRoutes SetupRoutesFunc) http.Handler {
 
     r.Mount("/assets/", http.StripPrefix("/assets/", fs))
 
-    
+    // Mount pprof routes for performance monitoring
+    r.Mount("/debug/pprof", http.HandlerFunc(pprof.Index))
+    r.Mount("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+    r.Mount("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+    r.Mount("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+    r.Mount("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
 
     r.Route("/", func(r chi.Router) {
         setupRoutes(r)

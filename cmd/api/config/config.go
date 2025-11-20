@@ -57,6 +57,7 @@ type Application struct {
 	Key_path  string
 	HtmlHandlers  *html_handler.HtmlHandlers
 	JsonHandlers   *json_handler.JsonHandlers
+	UseHTTPS     bool
 	
 }
 
@@ -96,8 +97,11 @@ func (app *Application) Run(mux http.Handler) error {
         TLSConfig:    app.Tlsconfig,
     }
 
-    log.Printf("Server has started at %s",
-        app.Sysconfig.ADDR)
-
-    return srv.ListenAndServeTLS(app.Cert_path, app.Key_path)
+    if app.UseHTTPS {
+        log.Printf("Server has started at %s (HTTPS)", app.Sysconfig.ADDR)
+        return srv.ListenAndServeTLS(app.Cert_path, app.Key_path)
+    } else {
+        log.Printf("Server has started at %s (HTTP)", app.Sysconfig.ADDR)
+        return srv.ListenAndServe()
+    }
 }
