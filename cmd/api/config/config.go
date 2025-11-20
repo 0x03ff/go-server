@@ -57,7 +57,6 @@ type Application struct {
 	Key_path  string
 	HtmlHandlers  *html_handler.HtmlHandlers
 	JsonHandlers   *json_handler.JsonHandlers
-	UseHTTPS     bool
 	
 }
 
@@ -88,8 +87,18 @@ func (app *Application) Mount() http.Handler {
 }
 
 func (app *Application) Run(mux http.Handler) error {
-    srv := &http.Server{
-        Addr:         app.Sysconfig.ADDR,
+    // HTTP server (port 80)
+    httpSrv := &http.Server{
+        Addr:         "0.0.0.0:80",
+        Handler:      mux,
+        WriteTimeout: time.Second * 30,
+        ReadTimeout:  time.Second * 10,
+        IdleTimeout:  time.Minute,
+    }
+
+    // HTTPS server (port 443)
+    httpsSrv := &http.Server{
+        Addr:         "0.0.0.0:443",
         Handler:      mux,
         WriteTimeout: time.Second * 30,
         ReadTimeout:  time.Second * 10,
@@ -97,11 +106,15 @@ func (app *Application) Run(mux http.Handler) error {
         TLSConfig:    app.Tlsconfig,
     }
 
-    if app.UseHTTPS {
-        log.Printf("Server has started at %s (HTTPS)", app.Sysconfig.ADDR)
-        return srv.ListenAndServeTLS(app.Cert_path, app.Key_path)
-    } else {
-        log.Printf("Server has started at %s (HTTP)", app.Sysconfig.ADDR)
-        return srv.ListenAndServe()
-    }
+    // Start HTTP server in goroutine
+    go func() {
+        log.Println("HTTP server started on 0.0.0.0:80")
+        if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("HTTP server failed: %v", err)
+        }
+    }()
+
+    // Start HTTPS server (blocks main thread)
+    log.Println("HTTPS server started on 0.0.0.0:443")
+    return httpsSrv.ListenAndServeTLS(app.Cert_path, app.Key_path)
 }
