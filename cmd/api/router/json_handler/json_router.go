@@ -70,7 +70,8 @@ func SetupJsonRoutes(r chi.Router, app App) {
 	r.With(authMiddleware).Get("/api/download_file/{user_id}/{file_id}", handlers.DownloadFileHandler)
 	// handle folder
 	r.With(authMiddleware).Post("/api/upload_folder/{user_id}", handlers.UploadFolderHandler)
-	r.With(authMiddleware).Get("/api/download_folder/{user_id}/{folder_id}", handlers.DownloadFolderHandler)
+	// Temporarily disable auth for DDoS testing
+	r.Get("/api/download_folder/{user_id}/{folder_id}", handlers.DownloadFolderHandler)
 	
 
 

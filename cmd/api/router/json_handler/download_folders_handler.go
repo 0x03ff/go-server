@@ -8,10 +8,7 @@ import (
 
 	"github.com/0x03ff/golang/internal/store/models"
 	"github.com/0x03ff/golang/internal/store/repositories"
-	"github.com/0x03ff/golang/utils"
 	"github.com/go-chi/chi/v5"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 func (h *JsonHandlers) DownloadFolderHandler(w http.ResponseWriter, r *http.Request) {
@@ -26,47 +23,49 @@ func (h *JsonHandlers) DownloadFolderHandler(w http.ResponseWriter, r *http.Requ
     // Check if user wants decrypted version
     shouldDecrypt := r.URL.Query().Get("decrypt") == "true"
 
-    // Get the token from the cookie
-    cookie, err := r.Cookie("token")
-    if err != nil {
-        http.Error(w, "Token not found. Please log in again.", http.StatusUnauthorized)
-        return
-    }
+    // TEMPORARILY DISABLED FOR DDOS TESTING
+    // // Get the token from the cookie
+    // cookie, err := r.Cookie("token")
+    // if err != nil {
+    //     http.Error(w, "Token not found. Please log in again.", http.StatusUnauthorized)
+    //     return
+    // }
 
-    token := cookie.Value
-    if token == "" {
-        http.Error(w, "Invalid token format", http.StatusUnauthorized)
-        return
-    }
+    // token := cookie.Value
+    // if token == "" {
+    //     http.Error(w, "Invalid token format", http.StatusUnauthorized)
+    //     return
+    // }
 
-    systemRepo := repositories.NewKeysRepository(h.dbPool)
-    // Verify the token
-    tokenObj, err := utils.VerifyToken(token, systemRepo)
-    if err != nil {
-        http.Error(w, "Invalid token", http.StatusUnauthorized)
-        return
-    }
+    // systemRepo := repositories.NewKeysRepository(h.dbPool)
+    // // Verify the token
+    // tokenObj, err := utils.VerifyToken(token, systemRepo)
+    // if err != nil {
+    //     http.Error(w, "Invalid token", http.StatusUnauthorized)
+    //     return
+    // }
 
-    // Extract claims from the token
-    claims := tokenObj.Claims.(jwt.MapClaims)
-    userIDClaim, ok := claims["user_id"].(string)
-    if !ok {
-        http.Error(w, "Invalid token claims", http.StatusUnauthorized)
-        return
-    }
+    // // Extract claims from the token
+    // claims := tokenObj.Claims.(jwt.MapClaims)
+    // userIDClaim, ok := claims["user_id"].(string)
+    // if !ok {
+    //     http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+    //     return
+    // }
 
-    // Check if the user_id in the URL matches the user_id in the token
-    if userIDClaim != userIDParam {
-        http.Error(w, "User ID mismatch", http.StatusUnauthorized)
-        return
-    }
+    // // Check if the user_id in the URL matches the user_id in the token
+    // if userIDClaim != userIDParam {
+    //     http.Error(w, "User ID mismatch", http.StatusUnauthorized)
+    //     return
+    // }
 
-    // Parse user_id to UUID
-    parsedUserID, err := uuid.Parse(userIDParam)
-    if err != nil {
-        http.Error(w, "Invalid user ID format", http.StatusBadRequest)
-        return
-    }
+    // TEMPORARILY DISABLED FOR DDOS TESTING
+    // // Parse user_id to UUID
+    // parsedUserID, err := uuid.Parse(userIDParam)
+    // if err != nil {
+    //     http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+    //     return
+    // }
 
     // Parse folder_id to integer
     folderID, err := strconv.Atoi(folderIDParam)
@@ -84,11 +83,12 @@ func (h *JsonHandlers) DownloadFolderHandler(w http.ResponseWriter, r *http.Requ
         return
     }
 
-    // Verify the folder belongs to the user
-    if folder.UserID != parsedUserID {
-        http.Error(w, "You don't have permission to download this folder", http.StatusForbidden)
-        return
-    }
+    // TEMPORARILY DISABLED FOR DDOS TESTING
+    // // Verify the folder belongs to the user
+    // if folder.UserID != parsedUserID {
+    //     http.Error(w, "You don't have permission to download this folder", http.StatusForbidden)
+    //     return
+    // }
 
     // Read encrypted file data
     encryptedData, err := os.ReadFile(folder.FilePath)

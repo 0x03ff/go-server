@@ -17,6 +17,7 @@ bin/main
 coverage.*
 *.coverprofile
 profile.cov
+*.prof
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -47,4 +48,4 @@ v1.1.0.txt
 
 # User uploaded files and folders
 assets/users/
-.gitignore
+bin/main
