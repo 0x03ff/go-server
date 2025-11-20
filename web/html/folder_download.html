@@ -163,21 +163,21 @@
 
                     const row = document.createElement('tr');
                     
-                    // Show decrypt option only for encrypted folders
-                    const showDecrypt = folder.encrypt_method !== 'non-encrypted';
+                    // Show different buttons based on encryption
+                    const isEncrypted = folder.encrypt_method !== 'non-encrypted';
                     
                     row.innerHTML = `
                         <td>${folder.title}</td>
                         <td><span class="badge">${folder.encrypt_method}</span></td>
                         <td>${formattedDate}</td>
                         <td>
+                            ${isEncrypted ? `
                             <button class="download-btn" data-folder-id="${folder.id}" 
                                 data-foldername="${folder.title}" 
                                 data-encrypt="${folder.encrypt_method}"
                                 data-decrypt="false">
                                 Download (Encrypted)
                             </button>
-                            ${showDecrypt ? `
                             <button class="download-btn decrypt-btn" data-folder-id="${folder.id}" 
                                 data-foldername="${folder.title}" 
                                 data-encrypt="${folder.encrypt_method}"
@@ -185,7 +185,14 @@
                                 style="margin-left: 5px; background-color: #28a745;">
                                 Download (Decrypted)
                             </button>
-                            ` : ''}
+                            ` : `
+                            <button class="download-btn" data-folder-id="${folder.id}" 
+                                data-foldername="${folder.title}" 
+                                data-encrypt="${folder.encrypt_method}"
+                                data-decrypt="false">
+                                Download
+                            </button>
+                            `}
                         </td>
                     `;
 
