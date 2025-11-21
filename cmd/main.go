@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// set drop_flag to drop the database:
-	drop_flag := false
+	drop_flag := true
 
 	if drop_flag {
 		// Delete all folders and their contents under /assets/users/

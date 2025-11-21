@@ -43,8 +43,8 @@ before run DDoS test, upload test folders with different encryption (non-encrypt
 
 check your user id and folder ids from database:
 
-sudo docker exec postgres_db psql -U postgres -d go_server -c "SELECT id FROM users;"
-sudo docker exec postgres_db psql -U postgres -d go_server -c "SELECT id, title, encrypt FROM folders ORDER BY id;"
+sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id FROM users;"
+sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id, title, encrypt FROM folders ORDER BY id;"
 
 edit ddos_test_hey.sh and update USER_ID and folder ids
 
