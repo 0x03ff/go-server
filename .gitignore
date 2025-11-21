@@ -49,3 +49,8 @@ v1.1.0.txt
 # User uploaded files and folders
 assets/users/
 bin/main
+
+# DDoS test results
+ddos_results/
+bin/main
+cpu.prof
