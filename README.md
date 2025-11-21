@@ -52,6 +52,9 @@ run DDoS test:
 
 ./ddos_test_hey.sh
 
+for testing again:
+rm -rf ddos_results && ./ddos_test_hey.sh
+
 test will run 5 scenarios (200 workers, 30 seconds each):
 1. HTTP + non-encrypted
 2. HTTPS + non-encrypted  
