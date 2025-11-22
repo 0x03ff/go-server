@@ -33,35 +33,89 @@ openssl x509 -req -in go_csr.pem -CA ca_cert.pem -CAkey ca_key.pem -set_serial 0
 
 ## Role D - DDoS Performance Testing
 
-for role D, need install hey tool for DDoS testing:
+### Prerequisites
 
+Install hey tool for HTTP load testing:
+
+```bash
 go install github.com/rakyll/hey@latest
+```
 
-the hey tool will be installed in ~/go/bin/hey
+The hey tool will be installed in `~/go/bin/hey`
 
-before run DDoS test, upload test folders with different encryption (non-encrypted, aes, rsa-2048, rsa-4096)
+Install sysstat for CPU monitoring if it is not installed:
 
-check your user id and folder ids from database:
+```bash
+sudo apt install sysstat
+```
 
-sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id FROM users;"
+### Prepare Test Data
+
+Before running DDoS tests, upload test folders with different encryption types through the web interface:
+- Folder 1: non-encrypted
+- Folder 2: AES
+- Folder 3: RSA-2048
+- Folder 4: RSA-4096
+
+Each folder should contain ~10MB files for meaningful performance comparison.
+
+### Configure Test Script
+
+Check your user ID and folder IDs from database:
+
+```bash
+sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id, username FROM users;"
 sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id, title, encrypt FROM folders ORDER BY id;"
+```
 
-edit ddos_test_hey.sh and update USER_ID and folder ids
+Edit `ddos_test_hey.sh` and update the `USER_ID` variable with your actual user ID:
 
-run DDoS test:
+```bash
+USER_ID="your-user-id-here"
+```
 
+Optionally adjust test parameters:
+- `CONCURRENCY`: Number of concurrent workers (default: 1700)
+- `DURATION`: Test duration per scenario (default: 5s)
+
+### Run DDoS Test
+
+Run the test script:
+
+```bash
+chmod +x ddos_test_hey.sh
 ./ddos_test_hey.sh
+```
 
-for testing again:
+To run fresh tests (clean previous results):
+
+```bash
 rm -rf ddos_results && ./ddos_test_hey.sh
+```
 
-test will run 5 scenarios (200 workers, 30 seconds each):
-1. HTTP + non-encrypted
-2. HTTPS + non-encrypted  
+### Test Scenarios
+
+The script will automatically run 5 test scenarios:
+1. HTTP + Non-encrypted (Baseline)
+2. HTTPS + Non-encrypted
 3. HTTPS + AES
 4. HTTPS + RSA-2048
 5. HTTPS + RSA-4096
 
-results saved in ddos_results/ folder
+Each test measures:
+- Throughput (requests/sec)
+- Average response time
+- Fastest/Slowest response
+- Total test duration
+- System-wide CPU usage (%)
+
+### View Results
+
+Results are saved in `ddos_results/` folder:
+
+- CPU monitoring uses `mpstat` to capture system-wide CPU utilization
+- The script automatically detects CPU core count using `nproc`
+- Server must be running before executing tests
+- Tests run sequentially with 5-second cooldown between scenarios
 
 
