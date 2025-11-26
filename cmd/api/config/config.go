@@ -99,10 +99,12 @@ func (app *Application) Run(mux http.Handler) error {
         Addr:         app.Sysconfig.ADDR,
         Handler:      mux,
         WriteTimeout: 10 * time.Second,
-        ReadTimeout:  60 * time.Second,
+        ReadTimeout:  5 * time.Second,
         IdleTimeout:  30 * time.Second,
         TLSConfig:    app.Tlsconfig,
     }
+
+	
 
     log.Printf("Main server started at %s", app.Sysconfig.ADDR)
     return srv.ListenAndServeTLS(app.Cert_path, app.Key_path)

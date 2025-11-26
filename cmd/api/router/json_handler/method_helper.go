@@ -12,11 +12,10 @@ import (
 )
 
 func generateRandomIP() string {
-    return fmt.Sprintf("%d.%d.%d.%d", 
-        rand.Intn(256), 
-        rand.Intn(256), 
-        rand.Intn(256), 
-        rand.Intn(256))
+
+
+    return fmt.Sprintf("192.168.0.%d", 
+        rand.Intn(8) + 2) 
 }
 
 
