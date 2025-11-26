@@ -41,14 +41,14 @@ func main() {
 		ADDR: "0.0.0.0:443",
 		DB: config.DBConfig{
 			DB_addr:      "postgres://comp4334:secret@localhost:5432/go_server?sslmode=disable",
-			MaxOpenConns: 25,
-			MaxIdleConns: 5,
+			MaxOpenConns: 50,
+			MaxIdleConns: 10,
 			MaxIdleTime:  "15m",
 		},
 	}
 
 	// set drop_flag to drop the database:
-	drop_flag := true
+	drop_flag := false
 
 	// set Random_request_address to product different ip-addr:
 
