@@ -33,3 +33,4 @@ go.work.sum
 
 # system log
 *.log
+*.csv

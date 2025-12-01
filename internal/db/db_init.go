@@ -24,7 +24,8 @@ func db_init(dropFlag bool, pool *pgxpool.Pool) error {
 			}
 
 		}
-		fmt.Println("Dropped tables")
+		log.Println("Database drop successfully")
+
 	}
 
 	_, err = pool.Exec(ctx, `
@@ -89,44 +90,30 @@ func db_init(dropFlag bool, pool *pgxpool.Pool) error {
 	if dropFlag {
 		// Create a new storage instance
 
-
-	
 		ctx := context.Background()
-
-		
-
-
 
 		publicKey, privateKey, err := repositories.GenerateECDSAKeyPair()
 		if err != nil {
 			log.Fatalf("Failed to generate ECDSA key pair: %v", err)
 		}
 
-
-
-
 		ecdh_publicKey, ecdh_privateKey, err := repositories.GenerateECDHKeyPair()
 		if err != nil {
 			log.Fatalf("Failed to generate ECDH key pair: %v", err)
 		}
 
-
-
-
 		// Insert the keys into the system_keys table
 		_, err = pool.Exec(ctx, `
 			INSERT INTO system_keys (public_key, private_key,ecdh_public_key,ecdh_private_key)
 			VALUES ($1, $2,$3,$4)
-		`, publicKey, privateKey,ecdh_publicKey,ecdh_privateKey)
+		`, publicKey, privateKey, ecdh_publicKey, ecdh_privateKey)
 		if err != nil {
 			log.Fatalf("Failed to insert keys into system_keys table: %v", err)
 		}
 
-		fmt.Println("Inserted keys into system_keys table")
-		
+		log.Println("Inserted keys into system_keys table")
 
 	}
-
 
 	return nil
 }

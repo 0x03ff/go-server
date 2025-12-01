@@ -16,15 +16,25 @@ import (
 )
 
 func main() {
-	
-    _, logFile, err := utils.SetupLogging()
-        if err != nil {
-            // Fallback to stderr since logging isn't set up yet
-            log.Fatalf("Failed to initialize logging: %v", err)
-        }
-        defer logFile.Close()
+
+	_, logFile, err := utils.SetupLogging()
+	if err != nil {
+		// Fallback to stderr since logging isn't set up yet
+		log.Fatalf("Failed to initialize logging: %v", err)
+	}
+	defer logFile.Close()
 	// ALL subsequent logs go to BOTH terminal and logs/system.log
-	log.Print("Logging initialized successfully\n\n") 
+	log.Print("System Logging initialized successfully\n\n")
+	
+	csv_filename := "security_events"
+	file_number := "_0001"
+	csv_logname := csv_filename + file_number
+	securityCSV, csvFile, err := utils.SetupSecurityCSV(csv_logname)
+	if err != nil {
+		log.Fatalf("Failed to initialize security CSV logging: %v", err)
+	}
+	defer csvFile.Close()
+
 	//TLS config
 	tlsCfg := &config.TlsConfig{
 		CertFile:   "internal/certs/go_cert.pem",
@@ -82,11 +92,10 @@ func main() {
 		Cert_path:    "internal/certs/go_cert.pem",
 		Key_path:     "internal/certs/go_key.pem",
 		HtmlHandlers: html_handler.NewHandlers(PDPool),
-		JsonHandlers: json_handler.NewHandlers(PDPool,random_request_address),
+		JsonHandlers: json_handler.NewHandlers(PDPool, random_request_address,securityCSV),
 	}
 
 	mux := app.Mount()
-    
-    
+
 	log.Fatal(app.Run(mux))
 }

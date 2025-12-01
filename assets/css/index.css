@@ -73,28 +73,3 @@ p {
 .btn-server:hover {
     background-color: #2980b9;
 }
-
-.btn-firewall {
-    background-color: #e74c3c;
-}
-
-.btn-firewall:hover {
-    background-color: #c0392b;
-}
-
-.btn-tcp {
-    background-color: #9b59b6;
-}
-
-.btn-tcp:hover {
-    background-color: #8e44ad;
-}
-
-.btn-security {
-    background-color: #16a085;
-}
-
-.btn-security:hover {
-    background-color: #13836f;
-}
-
