@@ -3,30 +3,13 @@ package json_handler
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
-	"time"
-	"log"
+
 	"github.com/0x03ff/golang/internal/store/models"
 	"github.com/0x03ff/golang/internal/store/repositories"
 	"github.com/0x03ff/golang/utils"
 )
 
 func (h *JsonHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	// ====== NEW: Rate limiting and brute-force protection ======
-	clientID := h.getClientIdentifier(r)
-	
-	// Check if account is locked out
-	if h.isLockedOut(clientID) {
-		utils.SendError(w, http.StatusTooManyRequests, "Account locked due to multiple failed attempts. Please try again later.")
-		return
-	}
-	
-	// Apply progressive delay based on failed attempts
-	h.applyProgressiveDelay(clientID)
-	
-	// Track the time of this login attempt
-	h.updateLastLoginTime(clientID)
-	// ====== END OF NEW RATE LIMITING SECTION ======
 
 	clientID := h.GetClientIdentifier(r)
 	
@@ -140,4 +123,3 @@ func (h *JsonHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		"server_public":  publicKeyPem,
 	})
 }
-

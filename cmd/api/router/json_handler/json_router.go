@@ -78,13 +78,5 @@ func SetupJsonRoutes(r chi.Router, app App) {
 	// handle folder
 	r.With(authMiddleware).Post("/api/upload_folder/{user_id}", handlers.UploadFolderHandler)
 	r.With(authMiddleware).Get("/api/download_folder/{user_id}/{file_id}", handlers.DownloadFolderHandler)
-<<<<<<< HEAD
-	
-
-
-
-
-=======
->>>>>>> da9c5bd (implement pprof server with port 8086, rate limit)
 
 }
