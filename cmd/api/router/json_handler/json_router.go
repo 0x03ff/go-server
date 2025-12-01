@@ -1,6 +1,7 @@
 package json_handler
 
 import (
+	"encoding/csv"
 	"sync"
 	"time"
 
@@ -15,28 +16,31 @@ type JsonHandlers struct {
 	dbPool    *pgxpool.Pool
 	WebServer *web_server.WebServerHandlers
 
-
-	// Rate limiting and brute-force protection fields 
-	random_address bool
+	// Rate limiting and brute-force protection fields
+	random_address          bool
 	mu                      sync.Mutex
 	failedAttempts          map[string]int       // Tracks failed attempts per client
 	lockoutTimes            map[string]time.Time // Tracks lockout expiration times
 	lastLoginTimes          map[string]time.Time // Tracks last login attempt times
 	successfulRegistrations map[string]int
-	
+
+	csvWriter *csv.Writer
+	csvMu     sync.Mutex
 }
 
 
 // NewHandlers creates and returns all JSON handlers
-func NewHandlers(dbPool *pgxpool.Pool, random_flag bool ) *JsonHandlers {
+func NewHandlers(dbPool *pgxpool.Pool, random_flag bool, csvWriter *csv.Writer) *JsonHandlers {
 	return &JsonHandlers{
-		dbPool:    dbPool,
-		WebServer: web_server.NewWebServerHandlers(dbPool),
-		random_address : random_flag ,
+		dbPool:                  dbPool,
+		WebServer:               web_server.NewWebServerHandlers(dbPool),
+		random_address:          random_flag,
 		failedAttempts:          make(map[string]int),
 		lockoutTimes:            make(map[string]time.Time),
 		lastLoginTimes:          make(map[string]time.Time),
 		successfulRegistrations: make(map[string]int),
+		csvWriter:               csvWriter,
+		csvMu:                   sync.Mutex{},
 	}
 }
 
