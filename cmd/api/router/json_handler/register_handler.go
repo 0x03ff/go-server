@@ -88,10 +88,10 @@ func (h *JsonHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clear failed attempts on successful registration
-	h.ClearFailedAttempts(clientID, "register")
+	h.ClearFailedAttempts(clientID, user.Username, "register")
 	
 	// ====== NEW: Track successful registrations and apply IP lockout ======
-	h.IncrementSuccessfulRegistrations(clientID)
+	h.IncrementSuccessfulRegistrations(clientID,user.Username)
 	
 	// Check if this IP has created too many accounts
 	if h.IsRegistrationThresholdReached(clientID) {

@@ -83,17 +83,16 @@ func (h *JsonHandlers) GetClientIdentifier(r *http.Request) string {
 
 // IsLockedOut checks if the client is currently locked out
 func (h *JsonHandlers) IsLockedOut(clientID string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+    h.mu.Lock()
+    defer h.mu.Unlock()
 
-	if lockoutTime, exists := h.lockoutTimes[clientID]; exists {
-		if time.Now().Before(lockoutTime) {
-			return true
-		}
-		// Clean up expired lockout
-		delete(h.lockoutTimes, clientID)
-	}
-	return false
+    if lockoutTime, exists := h.lockoutTimes[clientID]; exists {
+        if time.Now().Before(lockoutTime) {
+            return true
+        }
+        delete(h.lockoutTimes, clientID)
+    }
+    return false
 }
 
 // ApplyProgressiveDelay applies increasing delays based on failed attempts
@@ -118,41 +117,64 @@ func (h *JsonHandlers) ApplyProgressiveDelay(clientID string, action string) {
 
 // IncrementFailedAttempts increments the failed attempts counter and checks lockout
 func (h *JsonHandlers) IncrementFailedAttempts(clientID string, action string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+    h.mu.Lock()
+    defer h.mu.Unlock()
 
-	h.failedAttempts[clientID]++
-	attempts := h.failedAttempts[clientID]
+    h.failedAttempts[clientID]++
+    attempts := h.failedAttempts[clientID]
 
-	// Log the failed attempt
-	log.Printf("Failed "+action+" attempt %d for client %s", attempts, clientID)
+    // Log the failed attempt
+    log.Printf("Failed "+action+" attempt %d for client %s", attempts, clientID)
 
-	// Apply lockout after 5 failed attempts
-	if attempts >= 5 {
-		lockoutDuration := time.Duration(15+5*(attempts-5)) * time.Minute
-		h.lockoutTimes[clientID] = time.Now().Add(lockoutDuration)
+    // Apply lockout after 5 failed attempts
+    if attempts >= 5 {
+        lockoutDuration := time.Duration(15+5*(attempts-5)) * time.Minute
+        h.lockoutTimes[clientID] = time.Now().Add(lockoutDuration)
 
-		// Log the lockout
-		log.Printf("Client %s locked out for %s due to %d failed "+action+"attempts",
-			clientID, lockoutDuration, attempts)
-		// CSV LOGGING FOR LOGIN LOCKOUT
-		h.logSecurityEvent("lockout", clientID, "", "excessive failed attempts", action, attempts)
-	}
-
+        // Log the lockout with CORRECT format
+        log.Printf("Client %s locked out for %s due to %d failed %s attempts",
+            clientID, lockoutDuration, attempts, action)
+        
+        // CSV LOGGING FOR LOGIN LOCKOUT - USE CONSISTENT FORMAT
+        h.logSecurityEvent(
+            "account_lockout",  // Use consistent event type
+            clientID,
+            "",
+            fmt.Sprintf("Locked out for %s due to %d failed %s attempts", 
+                        lockoutDuration, attempts, action),
+            "security",         // Action should be "security"
+            int(lockoutDuration.Seconds()),  // Store duration in seconds
+        )
+    }
 }
+
 
 // ClearFailedAttempts resets the failed attempts counter for a client
-func (h *JsonHandlers) ClearFailedAttempts(clientID string, action string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *JsonHandlers) ClearFailedAttempts(clientID string, username string, action string) {
+    h.mu.Lock()
+    defer h.mu.Unlock()
 
-	delete(h.failedAttempts, clientID)
-	delete(h.lockoutTimes, clientID)
+    delete(h.failedAttempts, clientID)
+    delete(h.lockoutTimes, clientID)
 
-	// Log successful
-	log.Printf("Successful "+action+" for client %s", clientID)
+    // Log successful
+    log.Printf("Successful "+action+" for client %s", clientID)
+
+    // Record in CSV with proper event type
+    eventType := "login_success"
+    if action == "register" {
+        eventType = "registration_success"
+    }
+    
+    h.logSecurityEvent(
+        eventType,
+        clientID,
+        username,
+        "Successful "+action,
+        action,
+        1,
+    )
 }
-
 // UpdateLastLoginTime records the time of the current login attempt
 func (h *JsonHandlers) UpdateLastLoginTime(clientID string) {
 	h.mu.Lock()
@@ -184,7 +206,7 @@ func (h *JsonHandlers) LogSuspiciousActivity(clientID, username, reason string, 
 }
 
 // IncrementSuccessfulRegistrations increments the count of successful registrations for an IP
-func (h *JsonHandlers) IncrementSuccessfulRegistrations(clientID string) {
+func (h *JsonHandlers) IncrementSuccessfulRegistrations(clientID string, username string) {
 	h.mu.Lock()
 	h.successfulRegistrations[clientID]++
 	count := h.successfulRegistrations[clientID]
@@ -193,7 +215,7 @@ func (h *JsonHandlers) IncrementSuccessfulRegistrations(clientID string) {
 	log.Printf("Successful registration count for IP %s: %d", clientID, count)
 
 	// CSV LOGGING FOR REGISTRATION ATTEMPTS
-	h.logSecurityEvent("registration_attempt", clientID, "", "new account creation", "registration", count)
+	h.logSecurityEvent("registration_attempt", clientID, username, "new account creation", "registration", count)
 }
 
 // IsRegistrationThresholdReached checks if an IP has reached the threshold for registrations
@@ -221,25 +243,23 @@ func (h *JsonHandlers) LockIPForRegistration(clientID string) {
 }
 
 func (h *JsonHandlers) logSecurityEvent(eventType, clientID, username, reason, action string, attempts int) {
-	if h.csvWriter == nil {
-		return
-	}
+    h.csvMu.Lock()
+    defer h.csvMu.Unlock()
 
-	h.csvMu.Lock()
-	defer h.csvMu.Unlock()
-
-	record := []string{
-		time.Now().Format(time.RFC3339),
-		eventType,
-		clientID,
-		username,
-		reason,
-		strconv.Itoa(attempts),
-		action,
-	}
-
-	if err := h.csvWriter.Write(record); err != nil {
-		log.Printf("CSV write error: %v", err)
-	}
-	h.csvWriter.Flush()
+    timestamp := time.Now().Format("2006-01-02T15:04:05+08:00")
+    record := []string{
+        timestamp,
+        eventType,
+        clientID,
+        username,
+        reason,
+        strconv.Itoa(attempts),
+        action,
+    }
+    
+    if err := h.csvWriter.Write(record); err != nil {
+        log.Printf("Error writing to security CSV: %v", err)
+    }
+    h.csvWriter.Flush()
 }
+

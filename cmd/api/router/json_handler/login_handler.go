@@ -77,7 +77,7 @@ func (h *JsonHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clear failed attempts on successful login
-	h.ClearFailedAttempts(clientID, "login")
+	h.ClearFailedAttempts(clientID, user.Username, "login")
 	
 	user_PrivateKey, err := userRepo.GetUserECDHPrivateKey(r.Context(), loggedInUser)
 	if err != nil {

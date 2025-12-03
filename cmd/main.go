@@ -62,7 +62,7 @@ func main() {
 
 	// set Random_request_address to product different ip-addr:
 
-	random_request_address := true
+	random_request_address := false
 	if drop_flag {
 		// Delete all folders and their contents under /assets/users/
 		err = utils.DeleteDirectoryContents("assets/users")
