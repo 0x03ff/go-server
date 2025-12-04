@@ -7,7 +7,8 @@
 *.dll
 *.so
 *.dylib
-.main
+main
+bin/main
 # Test binary, built with `go test -c`
 *.test
 
@@ -16,6 +17,7 @@
 coverage.*
 *.coverprofile
 profile.cov
+*.prof
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -33,3 +35,22 @@ go.work.sum
 
 # system log
 *.log
+ca_cert.pem
+ca_key.pem
+.gitignore
+go_csr.pem
+go_key.pem
+go_cert.pem
+verify_encryption.sh
+test_encryption_manual.md
+comp4334-progress-report-group18-1.txt
+v1.1.0.txt
+
+# User uploaded files and folders
+assets/users/
+bin/main
+
+# DDoS test results
+ddos_results/
+bin/main
+cpu.prof

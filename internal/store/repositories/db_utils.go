@@ -1,15 +1,16 @@
 package repositories
 
 import (
-
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
-
 	"fmt"
 	"strings"
 
@@ -117,6 +118,129 @@ func GenerateHash256(input string) []byte {
     hasher := sha256.New()
     hasher.Write([]byte(normalized))
     return hasher.Sum(nil)
+}
+
+// GenerateRSAKeyPair generates RSA key pair with specified bit size (2048 or 4096)
+func GenerateRSAKeyPair(bits int) ([]byte, []byte, error) {
+	// Generate RSA private key
+	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate RSA private key: %w", err)
+	}
+
+	// Get public key
+	publicKey := &privateKey.PublicKey
+
+	// Marshal private key to PKCS#1 format
+	privBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+
+	// Encode private key to PEM format
+	privPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privBytes,
+	})
+
+	// Marshal public key to PKIX format
+	pubBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal RSA public key: %w", err)
+	}
+
+	// Encode public key to PEM format
+	pubPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubBytes,
+	})
+
+	return pubPEM, privPEM, nil
+}
+
+// EncryptAESGCM encrypts data using AES-GCM with the provided key
+func EncryptAESGCM(plaintext []byte, key []byte) ([]byte, error) {
+	// Create AES cipher
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AES cipher: %w", err)
+	}
+
+	// Create GCM mode
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	// Generate random nonce
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	// Encrypt and append nonce at the beginning
+	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
+	return ciphertext, nil
+}
+
+// DecryptAESGCM decrypts data using AES-GCM with the provided key
+func DecryptAESGCM(ciphertext []byte, key []byte) ([]byte, error) {
+	// Create AES cipher
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AES cipher: %w", err)
+	}
+
+	// Create GCM mode
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	// Extract nonce from the beginning
+	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+
+	// Decrypt
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt: %w", err)
+	}
+
+	return plaintext, nil
+}
+
+// GenerateAESKey generates a random AES-256 key (32 bytes)
+func GenerateAESKey() ([]byte, error) {
+	key := make([]byte, 32) // AES-256
+	if _, err := rand.Read(key); err != nil {
+		return nil, fmt.Errorf("failed to generate AES key: %w", err)
+	}
+	return key, nil
+}
+
+// DecryptRSA decrypts data using RSA private key
+func DecryptRSA(encryptedData []byte, privateKeyPEM []byte) ([]byte, error) {
+	// Parse the PEM encoded private key
+	block, _ := pem.Decode(privateKeyPEM)
+	if block == nil {
+		return nil, fmt.Errorf("failed to parse PEM block containing private key")
+	}
+
+	// Parse the RSA private key
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse RSA private key: %w", err)
+	}
+
+	// Decrypt using RSA
+	decryptedData, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, encryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt with RSA: %w", err)
+	}
+
+	return decryptedData, nil
 }
 
 

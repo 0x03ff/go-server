@@ -1,50 +1,253 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Files</title>
-    <link href="/assets/css/remain_page.css" rel="stylesheet" type="text/css">
-        <link rel="icon" href="/assets/image/storage_icon.ico">
-
-
+    <title>Your Folders</title>
+    <link href="/assets/css/download_page.css" rel="stylesheet" type="text/css">
+    <link rel="icon" href="/assets/image/storage_icon.ico">
 </head>
+
 <body>
-<div class="container">
+    <div class="container">
         <div class="sidebar">
             <a href="/home/{{.UserID}}">Home</a><br>
             <a href="/file_upload/{{.UserID}}">Upload file</a><br>
             <a href="/file_download/{{.UserID}}?index=0">Download file</a><br>
-            <a href="/folder_upload/{{.UserID}}" >Upload folder</a><br>
-            <a href="/folder_download/{{.UserID}}"class="active">Download folder</a><br>
+            <a href="/folder_upload/{{.UserID}}">Upload folder</a><br>
+            <a href="/folder_download/{{.UserID}}" class="active">Download folder</a><br>
             <a href="/logout/{{.UserID}}">Logout</a><br>
         </div>
         <div class="main-content">
-            
-        <h1>Online Storage System</h1>
+            <header>
+                <h1>Online Storage System</h1>
+            </header>
 
-        <div class="card">
-            
-        <h3>Your file</h3>
+            <div class="card">
+                <h3>Your Folders</h3>
 
-    
-        <table border="1" align="center">
-            <tr>
-                <th>Poll Name</th>
-                <th>Poll Question</th>
-                <th>Your Vote</th>
-            </tr>
-            
-           
-        </table>
-    
-        <p>No votes found.</p>
-    
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Loading folders...</p>
+                </div>
 
-    <div class="pagination">
-       
-         <p>next Page</p>
+                <div id="error-message"
+                    style="display: none; color: red; padding: 10px; background-color: #ffebee; margin: 10px 0; border-radius: 4px;">
+                </div>
+
+                <table class="file-table" id="folders-table">
+                    <thead>
+                        <tr>
+                            <th>Folder Name</th>
+                            <th>Encryption</th>
+                            <th>Uploaded On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="folders-list">
+                    </tbody>
+                </table>
+
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <img src="/assets/image/empty_folder.png" alt="No folders"
+                        style="width: 100px; height: 100px; opacity: 0.3;">
+                    <p>You haven't uploaded any folders yet</p>
+                </div>
+
+                <div class="pagination" id="pagination">
+                    <button id="prev-page" disabled>Previous</button>
+                    <span id="page-info">Page 1</span>
+                    <button id="next-page">Next</button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <script type="module">
+        // Download folder function (no decryption needed on client side for now)
+        async function downloadFolder(url, filename, encryptMethod) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Download failed (${response.status}): ${errorText}`);
+                }
+
+                // Get the file as blob
+                const blob = await response.blob();
+                const urlObject = URL.createObjectURL(blob);
+
+                // Create download link
+                const a = document.createElement('a');
+                a.href = urlObject;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(urlObject);
+                }, 100);
+                
+                console.log(`Folder downloaded successfully (${encryptMethod})`);
+                return true;
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                const errorElement = document.getElementById('error-message');
+                errorElement.textContent = `Failed to download: ${error.message}`;
+                errorElement.style.display = 'block';
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get user ID from the URL
+            const pathParts = window.location.pathname.split('/');
+            const userID = pathParts[2];
+
+            // State variables
+            let currentIndex = 0;
+
+            // DOM elements
+            const foldersList = document.getElementById('folders-list');
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+            const emptyState = document.getElementById('empty-state');
+
+            // Fetch folders from the JSON API
+            async function fetchFolders() {
+                try {
+                    loading.style.display = 'block';
+                    errorMessage.style.display = 'none';
+                    foldersList.innerHTML = '';
+
+                    const response = await fetch(`/api/folders/${userID}?index=${currentIndex}`);
+
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    updatePaginationControls(data);
+
+                    if (data.folders && data.folders.length > 0) {
+                        renderFolders(data.folders);
+                        emptyState.style.display = 'none';
+                    } else {
+                        emptyState.style.display = 'block';
+                    }
+
+                } catch (error) {
+                    errorMessage.textContent = `Error loading folders: ${error.message}`;
+                    errorMessage.style.display = 'block';
+                    console.error('Error fetching folders:', error);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            }
+
+            // Render folders in the table
+            function renderFolders(folders) {
+                foldersList.innerHTML = '';
+
+                folders.forEach(folder => {
+                    const date = new Date(folder.created_at);
+                    const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+
+                    const row = document.createElement('tr');
+                    
+                    // Show different buttons based on encryption
+                    const isEncrypted = folder.encrypt_method !== 'non-encrypted';
+                    
+                    row.innerHTML = `
+                        <td>${folder.title}</td>
+                        <td><span class="badge">${folder.encrypt_method}</span></td>
+                        <td>${formattedDate}</td>
+                        <td>
+                            ${isEncrypted ? `
+                            <button class="download-btn" data-folder-id="${folder.id}" 
+                                data-foldername="${folder.title}" 
+                                data-encrypt="${folder.encrypt_method}"
+                                data-decrypt="false">
+                                Download (Encrypted)
+                            </button>
+                            <button class="download-btn decrypt-btn" data-folder-id="${folder.id}" 
+                                data-foldername="${folder.title}" 
+                                data-encrypt="${folder.encrypt_method}"
+                                data-decrypt="true"
+                                style="margin-left: 5px; background-color: #28a745;">
+                                Download (Decrypted)
+                            </button>
+                            ` : `
+                            <button class="download-btn" data-folder-id="${folder.id}" 
+                                data-foldername="${folder.title}" 
+                                data-encrypt="${folder.encrypt_method}"
+                                data-decrypt="false">
+                                Download
+                            </button>
+                            `}
+                        </td>
+                    `;
+
+                    foldersList.appendChild(row);
+                });
+
+                // Add event listeners to download buttons
+                document.querySelectorAll('.download-btn').forEach(button => {
+                    button.addEventListener('click', function () {
+                        const folderID = this.getAttribute('data-folder-id');
+                        const foldername = this.getAttribute('data-foldername');
+                        const encryptMethod = this.getAttribute('data-encrypt');
+                        const shouldDecrypt = this.getAttribute('data-decrypt') === 'true';
+                        
+                        // Add decrypt parameter to URL if needed
+                        const downloadUrl = `/api/download_folder/${userID}/${folderID}${shouldDecrypt ? '?decrypt=true' : ''}`;
+                        
+                        // Set appropriate filename
+                        let filename;
+                        if (shouldDecrypt || encryptMethod === 'non-encrypted') {
+                            filename = foldername + '.zip';
+                        } else {
+                            filename = foldername + '.enc';
+                        }
+                        
+                        downloadFolder(downloadUrl, filename, encryptMethod);
+                    });
+                });
+            }
+
+            // Update pagination controls
+            function updatePaginationControls(data) {
+                const page = (currentIndex / 10) + 1;
+                pageInfo.textContent = `Page ${Math.floor(page)}`;
+                prevPageBtn.disabled = !data.has_prev;
+                nextPageBtn.disabled = !data.has_next;
+            }
+
+            // Event listeners for pagination
+            prevPageBtn.addEventListener('click', function () {
+                if (currentIndex >= 10) {
+                    currentIndex -= 10;
+                    fetchFolders();
+                }
+            });
+
+            nextPageBtn.addEventListener('click', function () {
+                currentIndex += 10;
+                fetchFolders();
+            });
+
+            // Initial load
+            fetchFolders();
+        });
+    </script>
 </body>
+
 </html>

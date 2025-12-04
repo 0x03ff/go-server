@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,6 +13,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// RoleDModeMiddleware adds Role D mode flag to context
+func RoleDModeMiddleware(roleDMode bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), "roleDMode", roleDMode)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
 
 func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -126,11 +137,11 @@ func JWTMiddleware(db *pgxpool.Pool) func(http.Handler) http.Handler {
 func redirectWithError(w http.ResponseWriter, r *http.Request, errorCode, path string) {
 	query := url.Values{}
 	query.Set("error", errorCode)
-	
+
 	// Preserve the original path for redirect after login
 	if r.URL.Path != "/login" {
 		query.Set("redirect", r.URL.Path)
 	}
-	
+
 	http.Redirect(w, r, path+"?"+query.Encode(), http.StatusSeeOther)
 }
