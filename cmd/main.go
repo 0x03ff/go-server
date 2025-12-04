@@ -41,10 +41,10 @@ func main() {
 	roleDMode := os.Getenv("ROLE_D_MODE") == "true"
 	if roleDMode {
 		log.Println("⚠️  ROLE D TESTING MODE ENABLED - Authentication disabled for folder downloads")
-		log.Println("⚠️  HTTP and HTTPS servers will run on ports 80 and 443")
 	} else {
-		log.Println("✓ Normal mode - Full authentication enabled, HTTP+HTTPS on ports 80 and 443")
+		log.Println("✓ Normal mode - Full authentication enabled")
 	}
+	log.Println("Server configuration: HTTP:80, HTTPS:443, pprof:8086")
 
 	//TLS config
 	tlsCfg := &config.TlsConfig{

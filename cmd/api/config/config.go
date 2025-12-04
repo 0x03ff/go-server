@@ -109,11 +109,7 @@ func (app *Application) Run(mux http.Handler) error {
 
 	// Start HTTP server in goroutine
 	go func() {
-		if app.RoleDMode {
-			log.Println("[Role D] HTTP server started on 0.0.0.0:80")
-		} else {
-			log.Println("HTTP server started on 0.0.0.0:80")
-		}
+		log.Println("HTTP server started on 0.0.0.0:80")
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("HTTP server failed: %v", err)
 		}

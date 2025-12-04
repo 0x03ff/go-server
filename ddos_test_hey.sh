@@ -3,7 +3,7 @@
 # DDoS Performance Testing Script using hey (supports HTTPS)
 # Tests 5 configurations: HTTP+non-enc, HTTPS+non-enc, HTTPS+AES, HTTPS+RSA-2048, HTTPS+RSA-4096
 
-USER_ID="3246e56c-22a4-4fb8-843d-a34458262a26"
+USER_ID="a8f91811-99e8-43d0-8671-11c011a7af37"
 RESULTS_DIR="./ddos_results"
 HEY="$HOME/go/bin/hey"
 CONCURRENCY=200
