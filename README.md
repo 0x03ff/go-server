@@ -15,7 +15,15 @@ sudo docker compose -f 'docker-compose.yml' up -d --build
 
 for development golang
 
-go build  -o ./bin/main ./cmd/ && sudo ./bin/main
+Normal mode (HTTPS only, full authentication):
+```bash
+go build -o ./bin/main ./cmd/ && sudo ./bin/main
+```
+
+Role D testing mode (HTTP + HTTPS, authentication disabled for folder downloads):
+```bash
+go build -o ./bin/main ./cmd/ && sudo ROLE_D_MODE=true ./bin/main
+```
 
 For use browser, You may need import the ca_cert.pem in browser setting.
 
@@ -80,7 +88,13 @@ Optionally adjust test parameters:
 
 ### Run DDoS Test
 
-Run the test script:
+Start the server in Role D testing mode:
+
+```bash
+go build -o ./bin/main ./cmd/ && sudo ROLE_D_MODE=true ./bin/main
+```
+
+In another terminal, run the test script:
 
 ```bash
 chmod +x ddos_test_hey.sh

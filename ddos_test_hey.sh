@@ -3,12 +3,12 @@
 # DDoS Performance Testing Script using hey (supports HTTPS)
 # Tests 5 configurations: HTTP+non-enc, HTTPS+non-enc, HTTPS+AES, HTTPS+RSA-2048, HTTPS+RSA-4096
 
-USER_ID="d64b4b39-308d-4ae1-862d-b7b4bf778d4a"
+USER_ID="3246e56c-22a4-4fb8-843d-a34458262a26"
 RESULTS_DIR="./ddos_results"
 HEY="$HOME/go/bin/hey"
-CONCURRENCY=1700
+CONCURRENCY=200
 DURATION="30s"
-DURATION_SEC=5
+DURATION_SEC=30
 
 # Check if hey is installed
 if [ ! -f "$HEY" ]; then

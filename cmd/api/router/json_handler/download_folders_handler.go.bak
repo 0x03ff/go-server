@@ -1,0 +1,189 @@
+package json_handler
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+
+	"github.com/0x03ff/golang/internal/store/models"
+	"github.com/0x03ff/golang/internal/store/repositories"
+	"github.com/0x03ff/golang/utils"
+	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+)
+
+func (h *JsonHandlers) DownloadFolderHandler(w http.ResponseWriter, r *http.Request) {
+    userIDParam := chi.URLParam(r, "user_id")
+    folderIDParam := chi.URLParam(r, "folder_id")
+
+    if userIDParam == "" || folderIDParam == "" {
+        http.Error(w, "User ID or Folder ID not found in URL path", http.StatusBadRequest)
+        return
+    }
+
+    // Check if user wants decrypted version
+    shouldDecrypt := r.URL.Query().Get("decrypt") == "true"
+
+    // Skip authentication in Role D testing mode
+    roleDMode := r.Context().Value("roleDMode").(bool)
+    
+    if !roleDMode {
+        // Get the token from the cookie
+    // cookie, err := r.Cookie("token")
+    // if err != nil {
+    //     http.Error(w, "Token not found. Please log in again.", http.StatusUnauthorized)
+    //     return
+    // }
+
+    // token := cookie.Value
+    // if token == "" {
+    //     http.Error(w, "Invalid token format", http.StatusUnauthorized)
+    //     return
+    // }
+
+    // systemRepo := repositories.NewKeysRepository(h.dbPool)
+    // // Verify the token
+    // tokenObj, err := utils.VerifyToken(token, systemRepo)
+    // if err != nil {
+    //     http.Error(w, "Invalid token", http.StatusUnauthorized)
+    //     return
+    // }
+
+    // // Extract claims from the token
+    // claims := tokenObj.Claims.(jwt.MapClaims)
+    // userIDClaim, ok := claims["user_id"].(string)
+    // if !ok {
+    //     http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+    //     return
+    // }
+
+    // // Check if the user_id in the URL matches the user_id in the token
+    // if userIDClaim != userIDParam {
+    //     http.Error(w, "User ID mismatch", http.StatusUnauthorized)
+    //     return
+    // }
+
+    // TEMPORARILY DISABLED FOR DDOS TESTING
+    // // Parse user_id to UUID
+    // parsedUserID, err := uuid.Parse(userIDParam)
+    // if err != nil {
+    //     http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+    //     return
+    // }
+
+    // Parse folder_id to integer
+    folderID, err := strconv.Atoi(folderIDParam)
+    if err != nil {
+        http.Error(w, "Invalid folder ID format", http.StatusBadRequest)
+        return
+    }
+
+    // Get the folder from the database
+    foldersRepo := repositories.NewFoldersRepository(h.dbPool)
+    folder := &models.Folder{}
+    err = foldersRepo.GetFolderById(r.Context(), folder, folderID)
+    if err != nil {
+        http.Error(w, "Failed to retrieve folder information", http.StatusInternalServerError)
+        return
+    }
+
+    // Verify folder ownership (skip in Role D mode)
+    if !roleDMode {
+        if folder.UserID != parsedUserID {
+            http.Error(w, "You don't have permission to download this folder", http.StatusForbidden)
+            return
+        }
+    }
+
+    // Read encrypted file data
+    encryptedData, err := os.ReadFile(folder.FilePath)
+    if err != nil {
+        http.Error(w, "Failed to read folder file", http.StatusInternalServerError)
+        return
+    }
+
+    var finalData []byte
+    var filename string
+
+    // Decrypt if requested and file is encrypted
+    if shouldDecrypt && folder.Encrypt != "non-encrypted" {
+        fmt.Printf("[DOWNLOAD] Decrypting folder: %s, Method: %s\n", folder.Title, folder.Encrypt)
+        
+        switch folder.Encrypt {
+        case "aes":
+            // Decrypt with AES
+            if len(folder.Secret) == 0 {
+                http.Error(w, "Encryption key not found", http.StatusInternalServerError)
+                return
+            }
+            
+            finalData, err = repositories.DecryptAESGCM(encryptedData, folder.Secret)
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Failed to decrypt with AES: %v", err), http.StatusInternalServerError)
+                return
+            }
+            fmt.Printf("[DOWNLOAD] AES decryption successful, size: %d bytes\n", len(finalData))
+
+        case "rsa-2048", "rsa-4096":
+            // For RSA: folder.Secret contains the RSA-encrypted AES key
+            // folder.PrivateKey contains the RSA private key (PEM format)
+            if len(folder.Secret) == 0 || len(folder.PrivateKey) == 0 {
+                http.Error(w, "Encryption keys not found", http.StatusInternalServerError)
+                return
+            }
+            
+            fmt.Printf("[DOWNLOAD] RSA encrypted AES key size: %d bytes\n", len(folder.Secret))
+            fmt.Printf("[DOWNLOAD] RSA private key size: %d bytes\n", len(folder.PrivateKey))
+            
+            // Step 1: Decrypt the AES key using RSA private key
+            aesKey, err := repositories.DecryptRSA(folder.Secret, folder.PrivateKey)
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Failed to decrypt AES key with RSA: %v", err), http.StatusInternalServerError)
+                return
+            }
+            fmt.Printf("[DOWNLOAD] Decrypted AES key size: %d bytes\n", len(aesKey))
+            
+            // Step 2: Decrypt the actual data using the AES key
+            finalData, err = repositories.DecryptAESGCM(encryptedData, aesKey)
+            if err != nil {
+                http.Error(w, fmt.Sprintf("Failed to decrypt data with AES: %v", err), http.StatusInternalServerError)
+                return
+            }
+            fmt.Printf("[DOWNLOAD] RSA+AES decryption successful, size: %d bytes\n", len(finalData))
+
+        default:
+            http.Error(w, "Unknown encryption method", http.StatusBadRequest)
+            return
+        }
+        
+        filename = fmt.Sprintf("%s.zip", folder.Title)
+    } else {
+        // Send encrypted data as-is
+        finalData = encryptedData
+        if folder.Encrypt == "non-encrypted" {
+            filename = fmt.Sprintf("%s.zip", folder.Title)
+        } else {
+            filename = fmt.Sprintf("%s.enc", folder.Title)
+        }
+        fmt.Printf("[DOWNLOAD] Sending encrypted file: %s\n", filename)
+    }
+
+    // Set headers for binary download
+    w.Header().Set("Content-Type", "application/octet-stream")
+    w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+    w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+    w.Header().Set("X-Content-Type-Options", "nosniff")
+    w.Header().Set("X-Encryption-Method", folder.Encrypt)
+    w.Header().Set("Content-Length", fmt.Sprintf("%d", len(finalData)))
+
+    // Write data to response
+    _, err = w.Write(finalData)
+    if err != nil {
+        fmt.Printf("[DOWNLOAD] Error sending data: %v\n", err)
+        return
+    }
+    
+    fmt.Printf("[DOWNLOAD] Successfully sent %d bytes\n", len(finalData))
+}

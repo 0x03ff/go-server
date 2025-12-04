@@ -1,0 +1,160 @@
+================================================================================
+                         SERVER MODE CONFIGURATION
+================================================================================
+
+The server supports two operating modes:
+
+1. NORMAL MODE (Default)
+   - HTTPS only on port 443
+   - Full authentication enabled
+   - Token-based access control
+   - Folder ownership verification
+
+2. ROLE D TESTING MODE
+   - HTTP on port 80 + HTTPS on port 443
+   - Authentication disabled for folder downloads
+   - Allows DDoS performance testing
+   - Other endpoints still protected
+
+
+================================================================================
+HOW TO SWITCH MODES
+================================================================================
+
+METHOD 1: Using Environment Variable (Recommended)
+---------------------------------------------------
+
+For Role D Testing Mode:
+
+    export ROLE_D_MODE=true
+    ./bin/main
+
+For Normal Mode:
+
+    unset ROLE_D_MODE
+    ./bin/main
+
+    OR
+
+    ./bin/main
+
+
+METHOD 2: One-line Command
+---------------------------
+
+Role D Testing Mode:
+
+    ROLE_D_MODE=true ./bin/main
+
+Normal Mode:
+
+    ./bin/main
+
+
+================================================================================
+VERIFICATION
+================================================================================
+
+When starting the server, check the log output:
+
+Normal Mode:
+    ✓ Normal mode - Full authentication enabled, HTTPS only on port 443
+    HTTPS server started on 0.0.0.0:443
+
+Role D Testing Mode:
+    ⚠️  ROLE D TESTING MODE ENABLED - Authentication disabled for folder downloads
+    ⚠️  HTTP and HTTPS servers will run on ports 80 and 443
+    [Role D] HTTP server started on 0.0.0.0:80
+    HTTPS server started on 0.0.0.0:443
+
+
+================================================================================
+SECURITY CONSIDERATIONS
+================================================================================
+
+Role D Mode Security Impact:
+- ✓ Folder downloads bypass authentication
+- ✓ Folder ownership checks disabled
+- ✓ Anyone can access folder download endpoint
+- ✓ HTTP server exposed (unencrypted traffic)
+
+Protected in Both Modes:
+- User login/registration
+- File uploads
+- Folder uploads
+- File listings
+- Other API endpoints
+
+
+IMPORTANT:
+- Only use Role D mode for performance testing
+- Never use Role D mode in production
+- Role D mode is designed for controlled testing environments
+
+
+================================================================================
+EXAMPLES
+================================================================================
+
+Example 1: Start server for DDoS testing
+-----------------------------------------
+
+    # Terminal 1: Start server in Role D mode
+    cd /home/eie3117/Downloads/go-server
+    ROLE_D_MODE=true ./bin/main
+
+    # Terminal 2: Run DDoS test
+    ./ddos_test_hey.sh
+
+
+Example 2: Start server for normal web usage
+---------------------------------------------
+
+    cd /home/eie3117/Downloads/go-server
+    ./bin/main
+
+    # Access via browser: https://localhost
+
+
+Example 3: Switch from testing to normal mode
+----------------------------------------------
+
+    # Stop current server (Ctrl+C)
+    # Restart in normal mode
+    ./bin/main
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Q: How do I know which mode is active?
+A: Check the log output when starting the server. It clearly indicates the mode.
+
+Q: Can I switch modes without restarting?
+A: No, you must restart the server to change modes.
+
+Q: Does Role D mode affect database?
+A: No, database operations remain the same in both modes.
+
+Q: Can I still use HTTPS in Role D mode?
+A: Yes, both HTTP (port 80) and HTTPS (port 443) are available in Role D mode.
+
+Q: Will my authentication tokens still work in Role D mode?
+A: Yes, but they're not required for folder downloads. Other endpoints still 
+   require authentication.
+
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Start in Role D mode:     ROLE_D_MODE=true ./bin/main
+Start in Normal mode:     ./bin/main
+Check mode:               Look for log messages on startup
+Switch modes:             Stop server (Ctrl+C), then restart with desired mode
+
+
+================================================================================
+                              END OF GUIDE
+================================================================================
