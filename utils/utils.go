@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -297,3 +298,35 @@ func SetupLogging() (*log.Logger, *os.File, error) {
 	return log.Default(), logFile, nil
 }
 
+func SetupSecurityCSV(csv_name string) (*csv.Writer, *os.File, error) {
+    // Create logs directory if missing
+    if err := os.MkdirAll("logs", 0755); err != nil {
+        return nil, nil, err
+    }
+	
+    // Open CSV file with append mode
+    csvFile, err := os.OpenFile("./logs/" + csv_name + ".csv", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        return nil, nil, err
+    }
+
+    writer := csv.NewWriter(csvFile)
+
+    // Check if the file is empty (new) to write header
+    stat, err := csvFile.Stat()
+    if err != nil {
+        return nil, nil, err
+    }
+    if stat.Size() == 0 {
+        header := []string{"timestamp", "event_type", "client_id", "username", "reason", "attempts", "action"}
+        if err := writer.Write(header); err != nil {
+            return nil, nil, err
+        }
+        writer.Flush()
+        if err := writer.Error(); err != nil {
+            return nil, nil, err
+        }
+    }
+
+    return writer, csvFile, nil
+}

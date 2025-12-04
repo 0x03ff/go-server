@@ -1,6 +1,7 @@
 package json_handler
 
 import (
+	"encoding/csv"
 	"sync"
 	"time"
 
@@ -14,29 +15,33 @@ import (
 type JsonHandlers struct {
 	dbPool    *pgxpool.Pool
 	WebServer *web_server.WebServerHandlers
-	
-	// ====== NEW: Rate limiting and brute-force protection fields ======
-	mu              sync.Mutex
-	failedAttempts  map[string]int       // Tracks failed attempts per client
-	lockoutTimes    map[string]time.Time // Tracks lockout expiration times
-	lastLoginTimes  map[string]time.Time // Tracks last login attempt times
-	// ====== END OF NEW FIELDS ======
-}
 
+	// Rate limiting and brute-force protection fields
+	random_address          bool
+	mu                      sync.Mutex
+	failedAttempts          map[string]int       // Tracks failed attempts per client
+	lockoutTimes            map[string]time.Time // Tracks lockout expiration times
+	lastLoginTimes          map[string]time.Time // Tracks last login attempt times
+	successfulRegistrations map[string]int
+
+	csvWriter *csv.Writer
+	csvMu     sync.Mutex
+}
 
 // NewHandlers creates and returns all JSON handlers
-func NewHandlers(dbPool *pgxpool.Pool) *JsonHandlers {
+func NewHandlers(dbPool *pgxpool.Pool, random_flag bool, csvWriter *csv.Writer) *JsonHandlers {
 	return &JsonHandlers{
-		dbPool:    dbPool,
-		WebServer: web_server.NewWebServerHandlers(dbPool),
-		
-		failedAttempts: make(map[string]int),
-		lockoutTimes:   make(map[string]time.Time),
-		lastLoginTimes: make(map[string]time.Time),
-		
+		dbPool:                  dbPool,
+		WebServer:               web_server.NewWebServerHandlers(dbPool),
+		random_address:          random_flag,
+		failedAttempts:          make(map[string]int),
+		lockoutTimes:            make(map[string]time.Time),
+		lastLoginTimes:          make(map[string]time.Time),
+		successfulRegistrations: make(map[string]int),
+		csvWriter:               csvWriter,
+		csvMu:                   sync.Mutex{},
 	}
 }
-
 
 // App interface for accessing JSON handlers
 type App interface {
@@ -70,12 +75,6 @@ func SetupJsonRoutes(r chi.Router, app App) {
 	r.With(authMiddleware).Get("/api/download_file/{user_id}/{file_id}", handlers.DownloadFileHandler)
 	// handle folder
 	r.With(authMiddleware).Post("/api/upload_folder/{user_id}", handlers.UploadFolderHandler)
-	// Temporarily disable auth for DDoS testing
+	// Download folder handler - auth handled conditionally inside handler based on roleDMode
 	r.Get("/api/download_folder/{user_id}/{folder_id}", handlers.DownloadFolderHandler)
-	
-
-
-
-
-
 }

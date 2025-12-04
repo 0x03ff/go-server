@@ -13,9 +13,9 @@
     <div class="container">
         <div class="sidebar">
             <a href="/home/{{.UserID}}">Home</a><br>
-            <a href="/file_upload/{{.UserID}}" >Upload file</a><br>
+            <a href="/file_upload/{{.UserID}}">Upload file</a><br>
             <a href="/file_download/{{.UserID}}?index=0">Download file</a><br>
-            <a href="/folder_upload/{{.UserID}}"class="active">Upload folder</a><br>
+            <a href="/folder_upload/{{.UserID}}" class="active">Upload folder</a><br>
             <a href="/folder_download/{{.UserID}}">Download folder</a><br>
             <a href="/logout/{{.UserID}}">Logout</a><br>
         </div>
@@ -34,10 +34,9 @@
                     </div>
                     <div class="input-group">
                         <label for="folder">Choose Folder</label>
-                        <input type="file" id="folder" name="folder" required  webkitdirectory directory>
+                        <input type="file" id="folder" name="folder" required webkitdirectory directory>
 
                     </div>
-
                     <div class="input-group">
                         <label for="key_type">Encryption Key Type:</label>
                         <select id="key_type" name="key_type" class="form-select">
@@ -124,4 +123,5 @@
         });
     </script>
 </body>
+
 </html>

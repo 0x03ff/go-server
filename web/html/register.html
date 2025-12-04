@@ -13,7 +13,10 @@
     <div class="container">
         <h2>Registration</h2>
 
-        <form id="register-form">
+        <div id="error-message" class="error" style="display:none;"></div>
+
+        <form id="register-form" method="POST">
+            
             <label for="register_username">Please input user ID: 6-20 Characters:</label>
             <input type="text" id="username" name="username" placeholder="UserID" maxlength="20" required>
 
@@ -43,95 +46,104 @@
         import { generateECDHKeyPairP384, ECDH_hash256 } from '/assets/js/ECDH_384.js';
         import { checkCSRFToken } from '/assets/js/utils.js';
 
-        sessionStorage.clear()
-        setTimeout(() => {
+        document.addEventListener('DOMContentLoaded', function() {
+            sessionStorage.clear();
+            
+            setTimeout(() => {
                 checkCSRFToken();
                 setInterval(checkCSRFToken, 30 * 1000);
             }, 100);
-        const form = document.getElementById('register-form');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
             
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm_password').value;
-            const recover = document.getElementById('recover').value;
-            const confirmRecover = document.getElementById('confirm_recover').value;
-            const csrfToken = document.getElementById('csrf_token').value;
-
-
-            if (username.length < 6 || username.length > 20) {
-                alert('User ID must be between 6 and 20 characters');
-                return;
-            }
-
-            if (password.length < 8 || password.length > 20) {
-                alert('Password must be between 8 and 20 characters');
-                return;
-            }
-
-            if (recover.length < 6 || recover.length > 20) {
-                alert('Recover must be between 6 and 20 characters');
-                return;
-            }
-
-
-            if (password !== confirmPassword) {
-                alert('Passwords do not match');
-                return;
-            }
-
-            if (recover !== confirmRecover) {
-                alert('Recover keys do not match');
-                return;
-            }
-
-
-
-
-
-            try {
+            const form = document.getElementById('register-form');
+            const errorMessage = document.getElementById('error-message');
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 
-                // FIXED: Added missing await and variable declarations
-                const hash_recover = await ECDH_hash256(recover);
-                const { publicKey: user_public_key, privateKey: user_encrypt_private_key } =
-                    await generateECDHKeyPairP384(hash_recover);
+                // Clear previous errors
+                errorMessage.style.display = 'none';
+                errorMessage.textContent = '';
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirm_password').value;
+                const recover = document.getElementById('recover').value;
+                const confirmRecover = document.getElementById('confirm_recover').value;
+                const csrfToken = document.getElementById('csrf_token').value;
 
-                const userData = {
-                    "username" : username,
-                    "password":password,
-                    "recover":recover,
-                    "ecdh_public_key": btoa(user_public_key),
-                    "ecdh_encrypt_private_key":user_encrypt_private_key
-                };
-               
-
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken,
-
-                    },
-                    body: JSON.stringify(userData)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json(); // Parse as JSON
-                    alert('Registration failed: ' + errorData.error);
+                // Client-side validation
+                if (!validateForm(username, password, confirmPassword, recover, confirmRecover)) {
                     return;
                 }
-                //user success create account and back /login 
-                alert('Registered successfully\nnow back to login page');
-                location.replace('/login');
 
+                try {
+                    const hash_recover = await ECDH_hash256(recover);
+                    const { publicKey: user_public_key, privateKey: user_encrypt_private_key } =
+                        await generateECDHKeyPairP384(hash_recover);
 
-            } catch (error) {
-                console.error(error);
-                alert('An error occurred: ' + error.message);
+                    const userData = {
+                        "username": username,
+                        "password": password,
+                        "recover": recover,
+                        "ecdh_public_key": btoa(user_public_key),
+                        "ecdh_encrypt_private_key": user_encrypt_private_key
+                    };
+                   
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken,
+                        },
+                        body: JSON.stringify(userData)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        showError(errorData.error || 'Registration failed. Please try again.');
+                        return;
+                    }
+                    
+                    // Registration successful
+                    alert('Registered successfully\nnow back to login page');
+                    location.replace('/login');
+
+                } catch (error) {
+                    showError('Network error. Please check your connection and try again.');
+                }
+            });
+            
+            // Helper functions
+            function validateForm(username, password, confirmPassword, recover, confirmRecover) {
+                if (username.length < 6 || username.length > 20) {
+                    showError('User ID must be 6-20 characters');
+                    return false;
+                }
+                if (password.length < 8 || password.length > 20) {
+                    showError('Password must be 8-20 characters');
+                    return false;
+                }
+                if (password !== confirmPassword) {
+                    showError('Passwords do not match');
+                    return false;
+                }
+                if (recover.length < 6 || recover.length > 20) {
+                    showError('Recovery key must be 6-20 characters');
+                    return false;
+                }
+                if (recover !== confirmRecover) {
+                    showError('Recovery keys do not match');
+                    return false;
+                }
+                return true;
             }
-        })
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                errorMessage.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
     </script>
 </body>
 

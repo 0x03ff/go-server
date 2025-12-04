@@ -25,7 +25,17 @@ func main() {
 	}
 	defer logFile.Close()
 	// ALL subsequent logs go to BOTH terminal and logs/system.log
-	log.Print("Logging initialized successfully\n\n")
+	log.Print("System Logging initialized successfully\n\n")
+
+	// Setup CSV security logging
+	csv_filename := "security_events"
+	file_number := "_0001"
+	csv_logname := csv_filename + file_number
+	securityCSV, csvFile, err := utils.SetupSecurityCSV(csv_logname)
+	if err != nil {
+		log.Fatalf("Failed to initialize security CSV logging: %v", err)
+	}
+	defer csvFile.Close()
 
 	// Check if Role D testing mode is enabled
 	roleDMode := os.Getenv("ROLE_D_MODE") == "true"
@@ -33,7 +43,7 @@ func main() {
 		log.Println("⚠️  ROLE D TESTING MODE ENABLED - Authentication disabled for folder downloads")
 		log.Println("⚠️  HTTP and HTTPS servers will run on ports 80 and 443")
 	} else {
-		log.Println("✓ Normal mode - Full authentication enabled, HTTPS only on port 443")
+		log.Println("✓ Normal mode - Full authentication enabled, HTTP+HTTPS on ports 80 and 443")
 	}
 
 	//TLS config
@@ -52,15 +62,18 @@ func main() {
 		ADDR: "0.0.0.0:443",
 		DB: config.DBConfig{
 			DB_addr:      "postgres://comp4334:secret@localhost:5432/go_server?sslmode=disable",
-			MaxOpenConns: 25,
-			MaxIdleConns: 5,
+			MaxOpenConns: 50,
+			MaxIdleConns: 10,
 			MaxIdleTime:  "15m",
 		},
 	}
 
 	// set drop_flag to drop the database:
-	drop_flag := true
+	drop_flag := false
 
+	// set Random_request_address to product different ip-addr:
+
+	random_request_address := false
 	if drop_flag {
 		// Delete all folders and their contents under /assets/users/
 		err = utils.DeleteDirectoryContents("assets/users")
@@ -90,7 +103,7 @@ func main() {
 		Cert_path:    "internal/certs/go_cert.pem",
 		Key_path:     "internal/certs/go_key.pem",
 		HtmlHandlers: html_handler.NewHandlers(PDPool),
-		JsonHandlers: json_handler.NewHandlers(PDPool),
+		JsonHandlers: json_handler.NewHandlers(PDPool, random_request_address, securityCSV),
 		RoleDMode:    roleDMode,
 	}
 

@@ -79,8 +79,15 @@ func (app *Application) Mount() http.Handler {
 
 	return router.SetupRoutes(setupFunc, app.RoleDMode)
 }
-
 func (app *Application) Run(mux http.Handler) error {
+	// 1. Start pprof HTTP server (port 8086) in goroutine
+	go func() {
+		log.Printf("pprof server started on :8086")
+		if err := http.ListenAndServe("0.0.0.0:8086", nil); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("pprof server failed: %v", err)
+		}
+	}()
+
 	// HTTPS server (port 443)
 	httpsSrv := &http.Server{
 		Addr:         "0.0.0.0:443",
@@ -91,24 +98,26 @@ func (app *Application) Run(mux http.Handler) error {
 		TLSConfig:    app.Tlsconfig,
 	}
 
-	// In Role D mode, also start HTTP server for testing
-	if app.RoleDMode {
-		httpSrv := &http.Server{
-			Addr:         "0.0.0.0:80",
-			Handler:      mux,
-			WriteTimeout: time.Second * 30,
-			ReadTimeout:  time.Second * 10,
-			IdleTimeout:  time.Minute,
-		}
-
-		// Start HTTP server in goroutine
-		go func() {
-			log.Println("[Role D] HTTP server started on 0.0.0.0:80")
-			if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("HTTP server failed: %v", err)
-			}
-		}()
+	// HTTP server (port 80) - always start in normal mode, conditional in Role D mode
+	httpSrv := &http.Server{
+		Addr:         "0.0.0.0:80",
+		Handler:      mux,
+		WriteTimeout: time.Second * 30,
+		ReadTimeout:  time.Second * 10,
+		IdleTimeout:  time.Minute,
 	}
+
+	// Start HTTP server in goroutine
+	go func() {
+		if app.RoleDMode {
+			log.Println("[Role D] HTTP server started on 0.0.0.0:80")
+		} else {
+			log.Println("HTTP server started on 0.0.0.0:80")
+		}
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server failed: %v", err)
+		}
+	}()
 
 	// Start HTTPS server (blocks main thread)
 	log.Println("HTTPS server started on 0.0.0.0:443")

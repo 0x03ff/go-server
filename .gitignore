@@ -54,3 +54,6 @@ bin/main
 ddos_results/
 bin/main
 cpu.prof
+
+# CSV logs
+*.csv

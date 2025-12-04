@@ -5,30 +5,41 @@ simple go server
 Group 18: topic-"Network Infrastructure Hardening: Evaluating Against DDoS Attack on Web Servers
 
 The web server use postgres with docker container, to start with:
+```bash
 sudo docker compose -f 'docker-compose.yml' up -d --build
+```
 
 if need reset database completely:
-
+```bash
 sudo docker compose -f 'docker-compose.yml' down
 sudo docker volume rm go-server_postgres_data
 sudo docker compose -f 'docker-compose.yml' up -d --build
+```
 
-for development golang
+## Development
 
-Normal mode (HTTPS only, full authentication):
+### Normal Mode (Full authentication, HTTP + HTTPS):
 ```bash
 go build -o ./bin/main ./cmd/ && sudo ./bin/main
 ```
 
-Role D testing mode (HTTP + HTTPS, authentication disabled for folder downloads):
+### Role D Testing Mode (Authentication disabled for folder downloads):
 ```bash
 go build -o ./bin/main ./cmd/ && sudo ROLE_D_MODE=true ./bin/main
 ```
+
+### Alternative (without sudo, using setcap):
+```bash
+go build -o ./bin/main ./cmd/ && sudo setcap 'cap_net_bind_service=+ep' ./bin/main && ./bin/main
+```
+
+## SSL/TLS Certificate Setup
 
 For use browser, You may need import the ca_cert.pem in browser setting.
 
 Incase you want create you own cert for testing:
 
+```bash
 openssl ecparam -genkey -name secp384r1 -out go_key.pem
 openssl req -new -key go_key.pem -out go_csr.pem -subj "/C=HK/ST=HK/L=HK/O=comp4334/CN=localhost"
 openssl x509 -req -days 365 -in go_csr.pem -signkey go_key.pem -out go_cert.pem
@@ -38,6 +49,7 @@ openssl ecparam -genkey -name secp384r1 -out ca_key.pem
 openssl req -x509 -new -key ca_key.pem -out ca_cert.pem -subj "/C=HK/ST=HK/L=HK/O=comp4334/CN=comp4334-CA" -days 365
 
 openssl x509 -req -in go_csr.pem -CA ca_cert.pem -CAkey ca_key.pem -set_serial 01 -out go_cert.pem -days 365
+```
 
 ## Role D - DDoS Performance Testing
 
@@ -76,15 +88,15 @@ sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id, userna
 sudo docker exec postgres_db psql -U comp4334 -d go_server -c "SELECT id, title, encrypt FROM folders ORDER BY id;"
 ```
 
-Edit `ddos_test_hey.sh` and update the `USER_ID` variable with your actual user ID:
+Edit \`ddos_test_hey.sh\` and update the \`USER_ID\` variable with your actual user ID:
 
 ```bash
 USER_ID="your-user-id-here"
 ```
 
 Optionally adjust test parameters:
-- `CONCURRENCY`: Number of concurrent workers (default: 1700)
-- `DURATION`: Test duration per scenario (default: 5s)
+- \`CONCURRENCY\`: Number of concurrent workers (default: 200)
+- \`DURATION\`: Test duration per scenario (default: 30s)
 
 ### Run DDoS Test
 
@@ -125,11 +137,9 @@ Each test measures:
 
 ### View Results
 
-Results are saved in `ddos_results/` folder:
+Results are saved in \`ddos_results/\` folder:
 
-- CPU monitoring uses `mpstat` to capture system-wide CPU utilization
-- The script automatically detects CPU core count using `nproc`
+- CPU monitoring uses \`mpstat\` to capture system-wide CPU utilization
+- The script automatically detects CPU core count using \`nproc\`
 - Server must be running before executing tests
 - Tests run sequentially with 5-second cooldown between scenarios
-
-

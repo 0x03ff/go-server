@@ -3,29 +3,20 @@ package web_server
 import (
 	"net/http"
 
-	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/firewall"
-	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/security"
 	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/server"
-	"github.com/0x03ff/golang/cmd/api/router/json_handler/web_server/tcp"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool" // Add this import
 )
 
 // WebServerHandlers holds all the handlers for the resilience API
 type WebServerHandlers struct {
-	Server    *server.Handler
-	Firewall  *firewall.Handler
-	TCP       *tcp.Handler
-	Security  *security.Handler
+	Server *server.Handler
 }
 
 // NewWebServerHandlers creates and returns all resilience handlers WITH dbPool
 func NewWebServerHandlers(dbPool *pgxpool.Pool) *WebServerHandlers {
 	return &WebServerHandlers{
-		Server:    server.NewHandler(dbPool),
-		Firewall:  firewall.NewHandler(dbPool),
-		TCP:       tcp.NewHandler(dbPool),
-		Security:  security.NewHandler(dbPool),
+		Server: server.NewHandler(dbPool),
 	}
 }
 
@@ -37,31 +28,13 @@ type App interface {
 // SetupResilienceRoutes configures all resilience API routes
 func SetupResilienceRoutes(r chi.Router, app App) {
 	handlers := app.GetWebServerHandlers()
-	
+
 	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-        http.Redirect(w, r, "/assets/image/storage_icon.ico", http.StatusMovedPermanently)
-    })
-	// Web Server Hardening Baseline (Researcher A)
+		http.Redirect(w, r, "/assets/image/storage_icon.ico", http.StatusMovedPermanently)
+	})
+	// Web Server Hardening Baseline
 	r.Route("/api/web_server", func(r chi.Router) {
 		r.Get("/", handlers.Server.WebServerHandler)
-		r.Post("/tests", handlers.Server.WebServerHandler)
 	})
-	
-	// Firewall Rule Efficacy (Researcher B)
-	r.Route("/api/firewall", func(r chi.Router) {
-		r.Get("/", handlers.Firewall.FirewallHandler)
-		r.Post("/tests", handlers.Firewall.FirewallHandler)
-	})
-	
-	// TCP Stack Optimization (Researcher C)
-	r.Route("/api/tcp", func(r chi.Router) {
-		r.Get("/", handlers.TCP.TCPHandler)
-		r.Post("/tests", handlers.TCP.TCPHandler)
-	})
-	
-	// Security Protocol Overhead (Researcher D)
-	r.Route("/api/security", func(r chi.Router) {
-		r.Get("/", handlers.Security.SecurityHandler)
-		r.Post("/tests", handlers.Security.SecurityHandler)
-	})
+
 }
