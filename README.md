@@ -71,15 +71,14 @@ openssl x509 -req -in go_csr.pem -CA ca_cert.pem -CAkey ca_key.pem -set_serial 0
 
 ## Login page error: fail to generate token
 
-
 **Stop the web server**
 
-Go to the : 
+Go to the :
 
 📦cmd
  ┣ 📂api
 ......
- ┗ 📜main.go <-- 
+ ┗ 📜main.go <--
 
 **Manually set the drop_flag to true**
 
@@ -91,13 +90,11 @@ After that
 
 **Manually set the **drop_flag** to false**
 
-
 ---
 
 ## Role A - DDoS Performance Testing
 
 ### web server setting
-
 
 Go to the :
 
@@ -140,7 +137,6 @@ Testing with the login page to verity can login.
 
 go to the:
 
-
 📦cmd
  ┣ 📂api
  ┃ ┣ 📂config
@@ -157,7 +153,7 @@ go to the:
  ┃ ┃ ┃ ┣ 📜method_helper.go <----
 ....
 
-** ┣ 📜.DS_Store 
+** ┣ 📜.DS_Store
  ┗ 📜main.go
 
 uncomment the statement under the case comment
@@ -190,7 +186,6 @@ func generateRandomIP() string {
 
 Such that simulate different ip address on the rate-limit aspect.
 
-
 ### Capture setup
 
 The script is locate on role/role-a:
@@ -214,7 +209,6 @@ The script is locate on role/role-a:
  ┃ ┗ 📜Session.session.script
 ```
 
-
 1. Change directory to the folder capture
 2. ./capture.sh [total time second] [capture preiod second], where default setting is: 1800 (30 min) and 30 second
 3. start capture the web server pprof data (After start the web server)
@@ -224,7 +218,6 @@ The script is locate on role/role-a:
    ```
    chmod +x ./capture.sh
    ```
-
 
 To analyze the result:
 
@@ -311,11 +304,30 @@ go install github.com/google/pprof@latest
     ┗ 📜system.log
    ```
 
-    watch the web server log
+   watch the web server log
+
+The zap have instruction on:
+
+```
+📦role-a
+ ┣ 📂capture
+ ┃ ┣ 📜capture.sh
+ ┃ ┗ 📜instruction-v1.3.0.pdf <--
+ ┣ 📂files
+ ┃ ┣ 📜200000-fuzz_payloads.txt
+ ┃ ┗ 📜payload_generater.py
+ ┗ 📂zap-session
+ ┃ ┣ 📂Session.session.tmp
+ ┃ ┣ 📜.DS_Store
+ ┃ ┣ 📜Session.session
+ ┃ ┣ 📜Session.session.data
+ ┃ ┣ 📜Session.session.lck
+ ┃ ┣ 📜Session.session.log
+ ┃ ┣ 📜Session.session.properties
+ ┃ ┗ 📜Session.session.script
+```
 
 ---
-
-
 
 ## Role B - DDoS Performance Testing
 
