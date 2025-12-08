@@ -11,54 +11,47 @@ import (
 )
 
 func generateRandomIP() string {
+	// 1. Legitimate user with exactly 10 devices (192.168.0.2 - 192.168.0.11)
+	return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(10))
 
-	
-	// 1. Legitimate user with around 10 devices (uncomment for normal testing)
-	//return fmt.Sprintf("192.168.0.%d", rand.Intn(10)+2)
+	// 2. Attacker with exactly 50 devices (192.168.0.2 - 192.168.0.51)
+	// return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(50))
 
-	// 2. Attacker with around 50 devices
-	// return fmt.Sprintf("192.168.0.%d", rand.Intn(50)+2)
+	// 3. Attacker with exactly 100 devices (192.168.0.2 - 192.168.0.101)
+	// return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(100))
 
-	// 3. Attacker with around 100 devices
-	// return fmt.Sprintf("192.168.0.%d", rand.Intn(100)+2)
+	// 4. Attacker with exactly 200 devices (192.168.0.2 - 192.168.0.201)
+	// return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(200))
 
-	// 4. Attacker with around 200 devices
-	// return fmt.Sprintf("192.168.0.%d", rand.Intn(200)+2)
+	// 5. Attacker with exactly 300 devices (198.18.0.0 - 198.18.1.43)
+	// n := rand.Intn(300)
+	// return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 
-	// 5. Attacker with around 300 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
+	// 6. Attacker with exactly 500 devices (198.18.0.0 - 198.18.1.243)
+	// n := rand.Intn(500)
+	// return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 
-	// 6. Attacker with around 500 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
+	// 7. Attacker with exactly 700 devices (198.18.0.0 - 198.18.2.172)
+	// n := rand.Intn(700)
+	// return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 
-	// 7. Attacker with around 700 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
+	// 8. Attacker with exactly 1000 devices (198.18.0.0 - 198.18.3.243)
+	// n := rand.Intn(1000)
+	// return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 
-	// 8. Attacker with around 1000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
+	// 9. Attacker with exactly 2000 devices (198.18.0.0 - 198.18.7.207)
+	// n := rand.Intn(2000)
+	// return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 
-	// 9. Attacker with around 2000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
+	// 10. Attacker with exactly 5000 devices (198.18.0.0 - 198.18.19.135)
+	// n := rand.Intn(5000)
+	// return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 
-	// 10. Attacker with around 5000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
-
-	// 11. Attacker with around 10000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
-
-	// 12. Attacker with around 20000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
-
-	// 13. Attacker with around 50000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
-
-	// 14. Attacker with around 100000 devices
-	// return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
-
-	// Extreme case for attack testing (100,000+ distinct IPs)
-	// Uses RFC 5737 benchmarking range (198.18.0.0/15) - safe for testing
-	return fmt.Sprintf("198.%d.%d.%d", 18 + rand.Intn(2), rand.Intn(256), rand.Intn(256))
+	// 11. Attacker with exactly 10000 devices (198.18.0.0 - 198.18.39.15)
+	//n := rand.Intn(10000)
+	//return fmt.Sprintf("198.18.%d.%d", n/256, n%256)
 }
+
 
 
 // methods for rate limiting and brute-force protection

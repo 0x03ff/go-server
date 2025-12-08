@@ -46,6 +46,21 @@ func main() {
 	}
 	log.Println("Server configuration: HTTP:80, HTTPS:443, pprof:8086")
 
+
+	// set drop_flag to drop the database:
+	drop_flag := false
+
+	// set Random_request_address to product different ip-addr:
+
+	random_request_address := false
+	if drop_flag {
+		// Delete all folders and their contents under /assets/users/
+		err = utils.DeleteDirectoryContents("assets/users")
+		if err != nil {
+			log.Fatal("Failed to delete user assets: ", err)
+		}
+	}
+
 	//TLS config
 	tlsCfg := &config.TlsConfig{
 		CertFile:   "internal/certs/go_cert.pem",
@@ -68,19 +83,7 @@ func main() {
 		},
 	}
 
-	// set drop_flag to drop the database:
-	drop_flag := false
-
-	// set Random_request_address to product different ip-addr:
-
-	random_request_address := false
-	if drop_flag {
-		// Delete all folders and their contents under /assets/users/
-		err = utils.DeleteDirectoryContents("assets/users")
-		if err != nil {
-			log.Fatal("Failed to delete user assets: ", err)
-		}
-	}
+	
 
 	PDPool, err := db.NewPostgresPool(cfg.DB.DB_addr, cfg.DB.MaxOpenConns, cfg.DB.MaxIdleConns, cfg.DB.MaxIdleTime, drop_flag)
 	if err != nil {

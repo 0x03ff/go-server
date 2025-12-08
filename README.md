@@ -4,12 +4,25 @@ simple go server
 
 Group 18: topic-"Network Infrastructure Hardening: Evaluating Against DDoS Attack on Web Servers
 
+To start with, the enviriroment require the golang, docker, and vscode as more convenient
+
+```
+sudo apt update
+sudo apt install snapd -y
+sudo apt install git -y
+sudo snap install go --classic
+sudo snap install code --classic
+sudo snap install docker
+```
+
 The web server use postgres with docker container, to start with:
+
 ```bash
 sudo docker compose -f 'docker-compose.yml' up -d --build
 ```
 
 if need reset database completely:
+
 ```bash
 sudo docker compose -f 'docker-compose.yml' down
 sudo docker volume rm go-server_postgres_data
@@ -19,16 +32,19 @@ sudo docker compose -f 'docker-compose.yml' up -d --build
 ## Development
 
 ### Normal Mode (Full authentication, HTTP + HTTPS):
+
 ```bash
 go build -o ./bin/main ./cmd/ && sudo ./bin/main
 ```
 
 ### Role D Testing Mode (Authentication disabled for folder downloads):
+
 ```bash
 go build -o ./bin/main ./cmd/ && sudo ROLE_D_MODE=true ./bin/main
 ```
 
 ### Alternative (without sudo, using setcap):
+
 ```bash
 go build -o ./bin/main ./cmd/ && sudo setcap 'cap_net_bind_service=+ep' ./bin/main && ./bin/main
 ```
@@ -51,6 +67,264 @@ openssl req -x509 -new -key ca_key.pem -out ca_cert.pem -subj "/C=HK/ST=HK/L=HK/
 openssl x509 -req -in go_csr.pem -CA ca_cert.pem -CAkey ca_key.pem -set_serial 01 -out go_cert.pem -days 365
 ```
 
+---
+
+## Login page error: fail to generate token
+
+
+**Stop the web server**
+
+Go to the : 
+
+📦cmd
+ ┣ 📂api
+......
+ ┗ 📜main.go <-- 
+
+**Manually set the drop_flag to true**
+
+Restart the web server, due to the database do not having the key that insert into database.
+
+Such that drop the database and restart the initialization database process.
+
+After that
+
+**Manually set the **drop_flag** to false**
+
+
+---
+
+## Role A - DDoS Performance Testing
+
+### web server setting
+
+
+Go to the :
+
+📦cmd
+ ┣ 📂api
+......
+ ┗ 📜main.go <--
+
+Manually set the random_request_address to true, to enable the simulate feature
+
+### Prerequisites
+
+Install OWASP zaproxy for the fuzz:
+
+```
+sudo apt update
+sudo apt install snapd-y
+sudo snap install zaproxy --classic
+```
+
+### Prepare Test Data
+
+Before running DDoS tests, create the account with user name:
+
+user name:
+
+`comp4334`
+
+user password:
+
+`comp4334password`
+
+user recover:
+
+`comp4334recover`
+
+Testing with the login page to verity can login.
+
+### Simutlation Case
+
+go to the:
+
+
+📦cmd
+ ┣ 📂api
+ ┃ ┣ 📂config
+ ┃ ┃ ┗ 📜config.go
+ *┃ ┗ 📂router*
+ ┃ ┃ ┣ 📂html_handler
+.....
+ ┃ ┃ ┣ 📂json_handler
+ ┃ ┃ ┃ ┣ 📂web_server
+ ┃ ┃ ┃ ┃ ┣ 📂server
+ ┃ ┃ ┃ ┃ ┃ ┗ 📜server_handler.go
+ *┃ ┃ ┃ ┃ ┗ 📜server_router.go
+*....**
+ ┃ ┃ ┃ ┣ 📜method_helper.go <----
+....
+
+** ┣ 📜.DS_Store 
+ ┗ 📜main.go
+
+uncomment the statement under the case comment
+
+For instance, the case 1 is used:
+
+```
+func generateRandomIP() string {
+	// 1. Legitimate user with exactly 10 devices (192.168.0.2 - 192.168.0.11)
+	return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(10))
+
+	// 2. Attacker with exactly 50 devices (192.168.0.2 - 192.168.0.51)
+	// return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(50))
+	......
+}
+```
+
+To modify to case 2:
+
+```
+func generateRandomIP() string {
+	// 1. Legitimate user with exactly 10 devices (192.168.0.2 - 192.168.0.11)
+	// return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(10))
+
+	// 2. Attacker with exactly 50 devices (192.168.0.2 - 192.168.0.51)
+	return fmt.Sprintf("192.168.0.%d", 2 + rand.Intn(50))
+	......
+}
+```
+
+Such that simulate different ip address on the rate-limit aspect.
+
+
+### Capture setup
+
+The script is locate on role/role-a:
+
+```
+📦role-a
+ ┣ 📂capture
+ ┃ ┣ 📜capture.sh <----
+ ┃ ┗ 📜instruction-v1.3.0.pdf
+ ┣ 📂files
+ ┃ ┣ 📜200000-fuzz_payloads.txt
+ ┃ ┗ 📜payload_generater.py
+ ┗ 📂zap-session
+ ┃ ┣ 📂Session.session.tmp
+ ┃ ┣ 📜.DS_Store
+ ┃ ┣ 📜Session.session
+ ┃ ┣ 📜Session.session.data
+ ┃ ┣ 📜Session.session.lck
+ ┃ ┣ 📜Session.session.log
+ ┃ ┣ 📜Session.session.properties
+ ┃ ┗ 📜Session.session.script
+```
+
+
+1. Change directory to the folder capture
+2. ./capture.sh [total time second] [capture preiod second], where default setting is: 1800 (30 min) and 30 second
+3. start capture the web server pprof data (After start the web server)
+
+   If that exist the error, consider:
+
+   ```
+   chmod +x ./capture.sh
+   ```
+
+
+To analyze the result:
+
+Download the requirement:
+
+```
+sudo apt update
+sudo apt install graphviz -y 
+
+go install github.com/google/pprof@latest 
+```
+
+1. Change directory to the folder capture
+2. Change directory to the create folder name call: profiles_2025.....
+3. Start analysis the cpu (CPU usage)/ heap (memort usage) with web
+
+   ```
+   go tool pprof -http=:6060 cpu_[the name of the file]*.pprof 
+   ```
+
+### ZAP environment setup
+
+1. Open the zaproxy
+2. Import the session, File -> open the session , choose the session
+
+   ```
+   📦roles
+    ┣ 📂role-a
+    ┃ ┣ 📂capture
+    ┃ ┃ ┣ 📜capture.sh
+    ┃ ┃ ┗ 📜instruction-v1.3.0.pdf
+    ┃ ┣ 📂files
+    ┃ ┃ ┣ 📜200000-fuzz_payloads.txt
+    ┃ ┃ ┗ 📜payload_generater.py
+    ┃ ┗ 📂zap-session
+    ┃ ┃ ┣ 📂Session.session.tmp
+    ┃ ┃ ┣ 📜.DS_Store
+    ┃ ┃ ┣ 📜Session.session <----
+    ┃ ┃ ┣ 📜Session.session.data
+    ┃ ┃ ┣ 📜Session.session.lck
+    ┃ ┃ ┣ 📜Session.session.log
+    ┃ ┃ ┣ 📜Session.session.properties
+    ┃ ┃ ┗ 📜Session.session.script
+   ....
+   ```
+3. After import the session, choose SITES:HTTPS://127.0.0.1 -> api -> POST:Login(){"username":.....}
+4. Choose attack -> fuzz
+5. Highlight the json payload
+6. Click Add.... -> Add...
+7. Choose import type: file, import the fuzz payload file (payload_generater.py to generate the payload)
+
+   ```
+   📦roles
+    ┣ 📂role-a
+    ┃ ┣ 📂capture
+    ┃ ┃ ┣ 📜capture.sh
+    ┃ ┃ ┗ 📜instruction-v1.3.0.pdf
+    ┃ ┣ 📂files
+    ┃ ┃ ┣ 📜200000-fuzz_payloads.txt <---
+    ┃ ┃ ┗ 📜payload_generater.py
+    ┃ ┗ 📂zap-session
+    ┃ ┃ ┣ 📂Session.session.tmp
+    ┃ ┃ ┣ 📜.DS_Store
+    ┃ ┃ ┣ 📜Session.session 
+    ┃ ┃ ┣ 📜Session.session.data
+    ┃ ┃ ┣ 📜Session.session.lck
+    ┃ ┃ ┣ 📜Session.session.log
+    ┃ ┃ ┣ 📜Session.session.properties
+    ┃ ┃ ┗ 📜Session.session.script
+   ......
+   ```
+8. Close the Windows
+9. Click choose Start Fuzzer(After active the capture.sh and web server)
+
+   To analysis the result:
+
+   Watch the ZAP fuzz result:
+
+   or
+
+   ```
+   📦logs <--
+    ┣ 📜security_events_0001.csv
+    ┗ 📜system.log
+   ```
+
+    watch the web server log
+
+---
+
+
+
+## Role B - DDoS Performance Testing
+
+---
+
+## Role C - DDoS Performance Testing
+
+---
+
 ## Role D - DDoS Performance Testing
 
 ### Prerequisites
@@ -72,6 +346,7 @@ sudo apt install sysstat
 ### Prepare Test Data
 
 Before running DDoS tests, upload test folders with different encryption types through the web interface:
+
 - Folder 1: non-encrypted
 - Folder 2: AES
 - Folder 3: RSA-2048
@@ -95,6 +370,7 @@ USER_ID="your-user-id-here"
 ```
 
 Optionally adjust test parameters:
+
 - \`CONCURRENCY\`: Number of concurrent workers (default: 200)
 - \`DURATION\`: Test duration per scenario (default: 30s)
 
@@ -122,6 +398,7 @@ rm -rf ddos_results && ./ddos_test_hey.sh
 ### Test Scenarios
 
 The script will automatically run 5 test scenarios:
+
 1. HTTP + Non-encrypted (Baseline)
 2. HTTPS + Non-encrypted
 3. HTTPS + AES
@@ -129,6 +406,7 @@ The script will automatically run 5 test scenarios:
 5. HTTPS + RSA-4096
 
 Each test measures:
+
 - Throughput (requests/sec)
 - Average response time
 - Fastest/Slowest response
