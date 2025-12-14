@@ -57,3 +57,6 @@ cpu.prof
 
 # CSV logs
 *.csv
+
+# mac
+.DS_Store

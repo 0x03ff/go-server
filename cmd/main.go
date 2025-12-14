@@ -48,11 +48,11 @@ func main() {
 
 
 	// set drop_flag to drop the database:
-	drop_flag := false
+	drop_flag := true
 
 	// set Random_request_address to product different ip-addr:
 
-	random_request_address := false
+	random_request_address := true
 	if drop_flag {
 		// Delete all folders and their contents under /assets/users/
 		err = utils.DeleteDirectoryContents("assets/users")
