@@ -69,21 +69,25 @@ openssl x509 -req -in go_csr.pem -CA ca_cert.pem -CAkey ca_key.pem -set_serial 0
 
 ---
 
-## Defuault flag in ./cmd/main.go
+## Default flag in ./cmd/main.go
+
 
 That exists two flag:
 
-drop_flag in line 51 (Fefault is True): if true, drop the entire database and prefrom database initialization.
+drop_flag in line 51 (Default is True): if true, drop the entire database and preform database initialization.
 
-(Each time restart the web server, all the store file,record, and user data is removed. )
+(Each time restart the web server, all the store file, record, and user data is removed. )
 
-If false, the dataase maintain the all the store file,record, and user data if any.
+If false, the database maintains the all the store file, record, and user data if any.
 
 random_request_addressin line 55 (Fefault is True): If true, allows simulated different ip address on the rate-limiting machinal aspect.
 
-(The affect scopt only within the /json_handler/ login_handler , register_handler and methed_helper)
+(The effect scope only within the /json_handler/ login_handler , register_handler and methed_helper)
 
-If false, allow ture ip address on the rate-limiting machinal aspect, as visit localhost with given 127.0.0.1.
+If false, allow trueip address on the rate-limiting machinal aspect, as visit localhost with given 127.0.0.1.
+
+---
+
 
 
 ## Login page error: fail to generate token
